@@ -284,6 +284,34 @@ footer { color: var(--muted); font-size: 12.5px; margin-top: 40px; padding-top: 
 .note-item .meta { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
 .note-item p { margin: 6px 0; font-size: 14.5px; color: var(--muted); }
 
+/* ============ 博客式笔记 ============ */
+.post-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.post-meta .date { color: var(--muted); font-size: 12.5px; margin-right: 4px; }
+.tag-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  padding: 2px 11px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.post-card {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  color: var(--text);
+  margin: 16px 0;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.25s ease;
+}
+.post-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--accent); text-decoration: none; }
+.post-card h3 { margin: 6px 0 8px; font-size: 19px; }
+.post-card p { margin: 0; color: var(--muted); font-size: 14px; }
+
 /* ============ 响应式 ============ */
 @media (max-width: 860px) {
   .sidebar {
