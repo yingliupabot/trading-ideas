@@ -56,5 +56,24 @@
       window.addEventListener("scroll", spy, { passive: true });
       spy();
     }
+    /* 首页搜索:按标题/tag/关键字过滤笔记 */
+    var input = document.getElementById("search");
+    var cards = Array.prototype.slice.call(
+      document.querySelectorAll("#post-list .post-card")
+    );
+    var noResult = document.getElementById("no-result");
+    if (input && cards.length) {
+      input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        var shown = 0;
+        cards.forEach(function (c) {
+          var hay = (c.getAttribute("data-search") || "").toLowerCase();
+          var hit = !q || hay.indexOf(q) !== -1;
+          c.style.display = hit ? "" : "none";
+          if (hit) shown++;
+        });
+        if (noResult) noResult.hidden = shown !== 0;
+      });
+    }
   });
 })();

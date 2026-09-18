@@ -10,11 +10,8 @@
 <body>
 <nav class="navbar">
   <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
     <a class="brand" href="index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
-    <div class="nav-links">
-      <a href="index.html" class="active">首页</a>
-      <a href="notes/">笔记</a>
-    </div>
     <div class="nav-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
         <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -26,22 +23,39 @@
     </div>
   </div>
 </nav>
+<div class="scrim" id="scrim"></div>
 
-<div class="wrap">
-  <div class="hero">
-    <h1>Trading Ideas</h1>
-    <p>交易脚本研读与想法记录 —— 一个持续更新的小站。</p>
-  </div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>笔记</h4>
+    <a href="tradingview-pine-scripts/volume-delta-footprint.html">Volume Delta Footprint Map 研读</a>
+  </aside>
 
-  <div class="grid">
-    <a class="card" href="notes/">
-      <span class="tag">博客</span>
-      <h3>📝 笔记</h3>
-      <p>脚本研读与交易想法,持续更新。最新:Volume Delta Footprint Map 研读。</p>
-    </a>
-  </div>
+  <main class="content">
+    <div class="top">
+      <h1>Trading Ideas</h1>
+      <p class="sub">交易脚本研读与想法记录,按时间倒序。</p>
+    </div>
 
-  <footer class="site">trading-ideas · 持续更新 · 内容仅作学习交流,不构成投资建议</footer>
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="搜索标题、tag 或关键字…" autocomplete="off">
+    </div>
+
+    <div id="post-list">
+      <a class="post-card" data-search="volume delta footprint map 研读 tradingview pine-script zeiierman 成交量 delta 足迹图 bid ask poc vah val 回测" href="tradingview-pine-scripts/volume-delta-footprint.html">
+        <div class="post-meta">
+          <span class="date">2026-09-17</span>
+          <span class="tag-pill">tradingview</span>
+          <span class="tag-pill">pine-script</span>
+        </div>
+        <h3>Volume Delta Footprint Map 研读</h3>
+        <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
+      </a>
+    </div>
+    <p id="no-result" class="no-result" hidden>没有匹配的笔记,换个关键词试试。</p>
+
+    <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
 </div>
 <script src="theme.js"></script>
 </body>
