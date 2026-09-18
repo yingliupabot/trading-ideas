@@ -1,148 +1,153 @@
 """
-Backtest inspired by Zeiierman's "Volume Delta Footprint Map" (TradingView).
+Backtest v2 — faithful to Zeiierman's "Volume Delta Footprint Map" (TradingView).
 
-Faithful to the author's described methodology:
-- Lower-timeframe delta: inside each 1H chart candle, sum signed 5m-candle volume
-  (+volume for bullish 5m candles, -volume for bearish ones).
-- Delta persistence: exponential decay via EMA of the hourly delta.
+Author's setup, mirrored here:
+- Asset: author's demos are XAUUSD / BCOUSD / NAS100USD (OANDA CFDs).
+  We use GLD (spot-gold tracker, no futures rolls) as the XAUUSD proxy.
+- Chart timeframe: 1D -> author's auto lower-timeframe mapping selects 60m
+  as the LTF for daily charts. Delta inside each daily bar = sum of signed
+  hourly volume (bullish hour +, bearish hour -), exactly the author's
+  "bullish candles contribute positive volume, bearish negative" rule.
+- Delta persistence: EMA(span=12) on daily delta (author default life=12).
+- "Strong" gate: normalized strength = |delta_ema| / rolling(120).max >= 0.12
+  (author default minS=0.12), plus extreme z-score |z| >= 1.5.
 - Signal ("Find Trapped Buyers and Sellers" from the script's own docs):
-  extreme delta + rejection at a swing high/low = trapped traders -> fade the move.
+  strong positive delta + rejection at 20d swing high -> SHORT (fade trapped buyers)
+  strong negative delta + rejection at 20d swing low  -> LONG  (fade trapped sellers)
+- Risk: 1.5x ATR(14) stop, 3x ATR target, max 10 trading days hold.
+- Baseline: buy-and-hold SPY over the exact same dates (AGENT.md rule).
 
-NOT a replication of the Pine Script (no price-stripe mapping, no visual overlay);
-this tests whether the *concept* (LTF delta + absorption fade) has edge.
+Approximations (honest): delta is estimated from hourly candle direction,
+NOT exchange bid/ask ticks (the author is upfront about this too). No fees /
+slippage modeled. One position at a time, full notional, no leverage.
+
+Data: data/GLD_1h.csv + data/SPY_1h.csv (yfinance, 2y hourly, saved to disk).
 """
 import numpy as np
 import pandas as pd
-import yfinance as yf
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-ASSETS = ["NBIS", "NVDA", "SPY", "BTC-USD"]
+HERE = Path(__file__).parent
+DATA = HERE / "data"
 NOTIONAL = 10_000
-WARMUP = 60
+WARMUP = 120          # author's lookback default
+MAX_HOLD = 10        # trading days
+SWING = 20
 
 # ---------------- data ----------------
-def load(sym):
-    df = yf.download(sym, period="60d", interval="5m", progress=False, auto_adjust=True)
-    df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
-    return df.dropna(subset=["Open", "High", "Low", "Close"])
+def load_1h(sym):
+    df = pd.read_csv(DATA / f"{sym}_1h.csv", index_col=0, parse_dates=True)
+    # normalize to ET date for daily resampling
+    df.index = pd.to_datetime(df.index, utc=True).tz_convert("America/New_York")
+    return df
 
-def to_hourly(df):
+def to_daily(df):
     df = df.copy()
     df["signed_vol"] = np.where(
         df["Close"] > df["Open"], df["Volume"],
         np.where(df["Close"] < df["Open"], -df["Volume"], 0.0))
-    g = df.resample("1h")
-    h = pd.DataFrame({
+    g = df.resample("1D")
+    d = pd.DataFrame({
         "Open": g["Open"].first(), "High": g["High"].max(),
         "Low": g["Low"].min(), "Close": g["Close"].last(),
         "Volume": g["Volume"].sum(), "delta": g["signed_vol"].sum(),
     }).dropna()
-    return h
+    return d
+
+def add_features(d):
+    d = d.copy()
+    d["delta_ema"] = d["delta"].ewm(span=12, adjust=False).mean()   # author life=12
+    roll = d["delta_ema"].rolling(WARMUP)
+    d["strength"] = d["delta_ema"].abs() / roll.max().replace(0, np.nan)  # author minS=0.12
+    d["z"] = (d["delta_ema"] - roll.mean()) / roll.std()
+    pc = d["Close"].shift(1)
+    tr = pd.concat([d["High"] - d["Low"], (d["High"] - pc).abs(),
+                    (d["Low"] - pc).abs()], axis=1).max(axis=1)
+    d["atr"] = tr.rolling(14).mean()
+    d["swing_hi"] = d["High"].rolling(SWING).max().shift(1)  # exclude today: no lookahead
+    d["swing_lo"] = d["Low"].rolling(SWING).min().shift(1)
+    return d.dropna()
 
 # ---------------- strategy ----------------
-def backtest(h):
-    h = h.copy()
-    h["delta_ema"] = h["delta"].ewm(span=6, adjust=False).mean()      # delta persistence (decay)
-    h["z"] = ((h["delta_ema"] - h["delta_ema"].rolling(48).mean())
-              / h["delta_ema"].rolling(48).std())                      # extreme pressure gauge
-    pc = h["Close"].shift(1)
-    tr = pd.concat([h["High"] - h["Low"], (h["High"] - pc).abs(),
-                    (h["Low"] - pc).abs()], axis=1).max(axis=1)
-    h["atr"] = tr.rolling(14).mean()
-    h["swing_hi"] = h["High"].rolling(24).max()
-    h["swing_lo"] = h["Low"].rolling(24).min()
-
-    o = h["Open"].to_numpy(); hh = h["High"].to_numpy(); ll = h["Low"].to_numpy()
-    c = h["Close"].to_numpy(); z = h["z"].to_numpy(); atr = h["atr"].to_numpy()
-    shi = h["swing_hi"].to_numpy(); slo = h["swing_lo"].to_numpy()
-    n = len(h)
-
-    trades, equity = [], np.full(n, np.nan)
-    pos, entry, eatr, held = 0, 0.0, 0.0, 0
-    eq = NOTIONAL
-    equity[:WARMUP] = NOTIONAL
-
-    def long_setup(i):
-        return z[i] < -1.25 and ll[i] <= slo[i] and c[i] > o[i]   # extreme selling, new low, rejection up
-    def short_setup(i):
-        return z[i] > 1.25 and hh[i] >= shi[i] and c[i] < o[i]    # extreme buying, new high, rejection down
-
+def backtest(d):
+    o = d["Open"].to_numpy(); hh = d["High"].to_numpy(); ll = d["Low"].to_numpy()
+    c = d["Close"].to_numpy(); z = d["z"].to_numpy(); st = d["strength"].to_numpy()
+    atr = d["atr"].to_numpy(); shi = d["swing_hi"].to_numpy(); slo = d["swing_lo"].to_numpy()
+    n = len(d)
+    eq = np.full(n, np.nan); trades = []
+    cur = NOTIONAL
     i = WARMUP
     while i < n - 1:
-        if pos == 0:
-            if long_setup(i):
-                pos, entry, eatr, held = 1, o[i + 1], atr[i], 0
-            elif short_setup(i):
-                pos, entry, eatr, held = -1, o[i + 1], atr[i], 0
-            equity[i] = eq
-            i += 1
-            continue
-        # manage open position on bar i
-        held += 1
-        stop = entry - pos * 1.5 * eatr
-        tgt = entry + pos * 3.0 * eatr
-        exit_px, why = None, ""
-        if pos == 1:
-            if ll[i] <= stop: exit_px, why = stop, "stop"
-            elif hh[i] >= tgt: exit_px, why = tgt, "target"
-        else:
-            if hh[i] >= stop: exit_px, why = stop, "stop"
-            elif ll[i] <= tgt: exit_px, why = tgt, "target"
-        if exit_px is None and (held >= 24 or (pos == 1 and short_setup(i)) or (pos == -1 and long_setup(i))):
-            exit_px, why = c[i], "signal/timeout"
-        if exit_px is not None:
-            pnl = pos * (exit_px - entry) / entry * NOTIONAL
-            eq += pnl
-            trades.append({"dir": pos, "pnl": pnl, "ret": pnl / NOTIONAL, "why": why,
-                           "t_in": h.index[i - held], "t_out": h.index[i]})
-            pos = 0
-        equity[i] = eq
-        i += 1
-    equity[n - 1] = eq
-    eq_s = pd.Series(equity, index=h.index)
-    return trades, eq_s
-
-def metrics(trades, eq_s):
-    if not trades:
-        return {"n": 0}
-    pnl = np.array([t["pnl"] for t in trades])
-    wins = pnl[pnl > 0]; losses = pnl[pnl <= 0]
-    dd = (eq_s / eq_s.cummax() - 1).min()
+        strong = st[i] >= 0.12   # author's minS default; z-score kept for reporting only
+        rng = hh[i] - ll[i]
+        long_sig = strong and z[i] < 0 and ll[i] <= slo[i] and rng > 0 and (c[i] - ll[i]) / rng >= 0.5
+        short_sig = strong and z[i] > 0 and hh[i] >= shi[i] and rng > 0 and (hh[i] - c[i]) / rng >= 0.5
+        if not (long_sig or short_sig):
+            i += 1; continue   # flat days stay NaN -> ffilled later
+        side = 1 if long_sig else -1
+        entry = c[i]; a = atr[i]
+        stop = entry - side * 1.5 * a; target = entry + side * 3.0 * a
+        exit_px, exit_i = c[min(i + MAX_HOLD, n - 1)], min(i + MAX_HOLD, n - 1)
+        for j in range(i + 1, min(i + MAX_HOLD + 1, n)):
+            if side == 1:
+                if ll[j] <= stop: exit_px, exit_i = stop, j; break
+                if hh[j] >= target: exit_px, exit_i = target, j; break
+            else:
+                if hh[j] >= stop: exit_px, exit_i = stop, j; break
+                if ll[j] <= target: exit_px, exit_i = target, j; break
+            exit_px, exit_i = c[j], j
+        ret = side * (exit_px - entry) / entry
+        trades.append(ret)
+        cur = cur * (1 + ret)
+        eq[i:exit_i + 1] = cur   # mark holding window at exit equity
+        i = exit_i + 1
+    eq = pd.Series(eq, index=d.index).ffill().fillna(NOTIONAL)
+    rets = np.array(trades)
+    wins = rets[rets > 0]
     return {
-        "n": len(trades),
-        "win_rate": round(len(wins) / len(trades) * 100, 1),
-        "total_ret_%": round((eq_s.iloc[-1] / NOTIONAL - 1) * 100, 2),
-        "avg_trade_%": round(pnl.mean() / NOTIONAL * 100, 2),
-        "profit_factor": round(wins.sum() / abs(losses.sum()), 2) if losses.sum() else float("inf"),
-        "max_dd_%": round(dd * 100, 2),
-    }
+        "n": len(rets),
+        "win_rate": 100 * (rets > 0).mean() if len(rets) else 0,
+        "total_ret_%": 100 * (eq.iloc[-1] / NOTIONAL - 1),
+        "avg_trade_%": 100 * rets.mean() if len(rets) else 0,
+        "profit_factor": wins.sum() / abs(rets[rets < 0].sum()) if (rets < 0).any() and wins.size else float("inf"),
+        "max_dd_%": 100 * ((eq / eq.cummax() - 1).min()),
+        "bars": n,
+    }, eq
+
+def buy_hold(d):
+    return 100 * (d["Close"].iloc[-1] / d["Close"].iloc[0] - 1)
 
 # ---------------- run ----------------
-results, curves = {}, {}
-for sym in ASSETS:
-    print(f"loading {sym} ...", flush=True)
-    h = to_hourly(load(sym))
-    trades, eq = backtest(h)
-    m = metrics(trades, eq)
-    bh = (h["Close"].iloc[-1] / h["Close"].iloc[WARMUP] - 1) * 100
-    m["buy_hold_%"] = round(bh, 2)
-    m["bars"] = len(h)
-    results[sym] = m
-    curves[sym] = (eq / NOTIONAL, h["Close"] / h["Close"].iloc[WARMUP])
-    print(sym, m, flush=True)
+# ---------------- run ----------------
+def main():
+    gld = add_features(to_daily(load_1h("GLD")))
+    spy = to_daily(load_1h("SPY")).loc[gld.index[0]:gld.index[-1]]
 
-pd.DataFrame(results).T.to_csv("/home/hatch/workspace/quant/delta_footprint_backtest/results.csv")
+    res, eq = backtest(gld)
+    res["buy_hold_SPY_%"] = round(buy_hold(spy), 2)
+    res["buy_hold_GLD_%"] = round(buy_hold(gld), 2)
+    res["excess_vs_SPY_%"] = round(res["total_ret_%"] - res["buy_hold_SPY_%"], 2)
+    res["period"] = f"{gld.index[0].date()} -> {gld.index[-1].date()}"
 
-fig, axes = plt.subplots(2, 2, figsize=(12, 8), sharex=False)
-for ax, sym in zip(axes.flat, ASSETS):
-    strat, bh = curves[sym]
-    ax.plot(strat.index, strat.values, label="delta-fade strategy")
-    ax.plot(bh.index, bh.values, label="buy & hold", alpha=0.6, linestyle="--")
-    ax.set_title(f"{sym}  (n={results[sym]['n']}, ret={results[sym]['total_ret_%']}%)")
-    ax.legend(fontsize=8)
-fig.suptitle("Volume-Delta absorption-fade backtest: equity (1.0 = start), 5m->1h, 60d")
-fig.tight_layout()
-fig.savefig("/home/hatch/workspace/your_files/delta_backtest_equity.png", dpi=110)
-print("done")
+    print(pd.DataFrame([res]).T)
+
+    pd.DataFrame([{k: (round(v, 2) if isinstance(v, float) else v) for k, v in res.items()}]) \
+        .to_csv(HERE / "results.csv", index=False)
+
+    # equity plot: strategy vs SPY buy-hold (rebased)
+    spy_eq = NOTIONAL * spy["Close"] / spy["Close"].iloc[0]
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(eq.index, eq.values, label="Delta-fade strategy (GLD)")
+    ax.plot(spy_eq.index, spy_eq.values, label="Buy-hold SPY (baseline)", linestyle="--")
+    ax.set_title("Volume Delta Footprint v2 — strategy vs SPY baseline")
+    ax.set_ylabel("Equity ($)")
+    ax.legend(); ax.grid(alpha=0.3); fig.tight_layout()
+    (HERE / "assets").mkdir(exist_ok=True)
+    fig.savefig(HERE / "assets" / "equity.png", dpi=100)
+    print("saved results.csv + assets/equity.png")
+
+if __name__ == "__main__":
+    main()

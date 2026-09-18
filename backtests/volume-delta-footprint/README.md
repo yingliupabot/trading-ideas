@@ -1,39 +1,70 @@
-# Volume-Delta Footprint Backtest
+# Volume-Delta Footprint Backtest (v2)
 
-Python backtest inspired by Zeiierman's
+A Python backtest faithful to Zeiierman's
 [Volume Delta Footprint Map](https://www.tradingview.com/script/7vcb6M4J-Volume-Delta-Footprint-Map-Zeiierman/)
-— the `.pine` source and notes for that indicator live in
-`tradingview-pine-scripts/`.
+(TradingView, Pine Script) — author's assets, author's timeframe mapping,
+author's default parameters.
 
-## Method
+## Author's setup, mirrored
 
-- **Lower-timeframe delta**: inside each 1H candle, sum signed 5-minute candle
-  volume (+volume for bullish candles, −volume for bearish ones).
-- **Delta persistence**: EMA of the hourly delta (exponential decay).
-- **Signal** ("trapped buyers/sellers"): extreme delta z-score (|z| > 1.25)
-  + new 24-bar high/low + rejection candle → fade the move.
-- **Exits**: 1.5×ATR stop, 3×ATR target, max hold 24 bars, or opposite signal.
+- **Asset**: the author's demo screenshots are XAUUSD / BCOUSD / NAS100USD
+  (OANDA CFDs). We trade **GLD** as the XAUUSD (spot gold) proxy — no futures
+  rolls, clean 2-year hourly history.
+- **Timeframes**: daily chart bars; the author's auto lower-timeframe mapping
+  selects **60m** as the LTF for daily charts. Delta inside each daily bar =
+  sum of signed hourly volume (bullish hour +, bearish hour −), exactly the
+  author's documented estimation rule.
+- **Parameters** (author defaults): delta persistence EMA(12), minimum stripe
+  strength 0.12, lookback 120 bars.
+- **Signal** ("Find Trapped Buyers and Sellers" from the script's docs):
+  strong positive delta + rejection at 20-day swing high → SHORT;
+  strong negative delta + rejection at 20-day swing low → LONG.
+- **Risk**: 1.5×ATR(14) stop, 3×ATR target, max 10 trading days hold.
+  $10k notional per trade, one position at a time, no leverage.
+- **Baseline** (repo AGENT.md rule): buy-and-hold SPY over the exact same
+  dates, dividends included.
 
-## Results (60 days of 5m data, $10k notional/trade, no leverage)
+## Results (2y hourly data → 382 daily bars, 2025-03-12 → 2026-09-17)
 
-| Asset   | Trades | Win rate | Strategy | Buy & hold | Profit factor | Max DD |
-|---------|--------|----------|----------|------------|---------------|--------|
-| NBIS    | 3      | 67%      | +9.1%    | −1.3%      | 2.17          | −7.8%  |
-| NVDA    | 3      | 67%      | +3.9%    | +9.3%      | 2.83          | −2.1%  |
-| SPY     | 2      | 100%     | +1.5%    | +0.5%      | —             | 0%     |
-| BTC-USD | 8      | 25%      | −1.3%    | +16.6%     | 0.74          | −3.9%  |
+| Metric | Strategy (GLD delta-fade) | Baseline: SPY buy & hold |
+|---|---|---|
+| Total return | −4.06% | +36.46% |
+| Excess return | −40.52% | — |
+| Trades | 9 (win rate 22%, profit factor 0.76) | — |
+| Max drawdown | −9.18% | — |
+| GLD buy & hold (ref) | +47.33% | — |
 
-Small sample (2–8 trades): proof of concept, not a conclusion. No
-fees/slippage modeled. Delta is approximated from candle direction, not
-exchange bid/ask data.
+The strategy lost money while gold itself rose 47% and SPY 36%: fading
+"trapped" traders through a 2-year gold bull market means catching falling
+knives. The honest read is that the author's tool is for **reading buying /
+selling pressure at key levels to assist timing** — not a standalone
+mean-reversion system, and especially not in a trending market.
 
-![equity curves](equity.png)
+Limitations: delta is estimated from hourly candle direction, not exchange
+bid/ask ticks (the author is upfront about this too); 9 trades is still a
+small sample; no fees/slippage modeled.
+
+![equity: strategy vs SPY baseline](assets/equity.png)
 
 ## Run it
 
+Data is saved on disk — no re-download needed:
+
 ```bash
-pip install yfinance pandas numpy matplotlib
-python backtest.py
+pip install -r requirements.txt
+python backtest.py        # reads data/*.csv, writes results.csv + assets/equity.png
+python download_data.py   # re-download 2y hourly bars from yfinance (optional)
 ```
 
-Educational purposes only — not financial advice.
+## Files
+
+- `backtest.py` — delta computation, strategy, metrics, charts (reads local data)
+- `download_data.py` — one-time yfinance download → `data/`
+- `data/GLD_1h.csv`, `data/SPY_1h.csv` — 2 years of hourly bars, saved
+- `results.csv` — metrics table from the last run
+- `assets/equity.png` — equity curve vs SPY baseline
+
+## Disclaimer
+
+Educational purposes only. Not financial advice. Past performance does not
+guarantee future results.
