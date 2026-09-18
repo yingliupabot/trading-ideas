@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Close-Near-Low 均值回归策略研读 · Trading Ideas</title>
+<link rel="stylesheet" href="../../styles.css">
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">策略介绍</a>
+    <a href="#logic">逻辑拆解</a>
+    <a href="#verify">Python 回测</a>
+    <a href="#takeaways">结论与局限</a>
+    <a href="#source">原帖链接</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>Close-Near-Low 均值回归策略</h1>
+    <p>Reddit r/algotrading 策略帖《Backtesting a close near low strategy》（2021 年）·
+    <a href="https://www.reddit.com/r/algotrading/comments/ni1zuj/backtesting_a_close_near_low_strategy/">原帖链接</a></p>
+    <div class="post-meta">
+      <span class="date">2026-09-18</span>
+      <span class="tag-pill">reddit</span>
+      <span class="tag-pill">strategy</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">策略介绍</h2>
+  <p>这是 r/algotrading 上一个规则极简的日线均值回归策略，直觉只有一句话：
+  <strong>日内被抛售、收在低位的股票，隔夜/次日容易小幅反弹</strong>。整个策略只有一个公式、一个阈值，
+  没有任何优化过的指标参数，数据需求只是日线 OHLC，极易复刻验证。</p>
+  <div class="callout">第三方量化研究仓库 <code>closedform/alpha-scout</code> 的 Reddit 策略挖掘报告
+  （2025-10-24）收录并核验了这篇帖子，评级为 "Promising – Simple, testable, and compatible with auction order workflow"
+  （有前景、简单、可测试）。原帖作者的具体收益数字未能核实——见文末诚实声明。</div>
+
+  <h2 class="sec" id="logic">逻辑拆解</h2>
+  <ul class="tight">
+    <li><strong>信号</strong>：<code>RangePctClose = (Close − Low) / (High − Low)</code>，
+    即收盘价在当日高低区间中的相对位置。当 <code>RangePctClose ≤ 0.2</code> 时触发信号——
+    收盘价落在当日区间底部 20% 以内（当天被砸下来、收在低位）。</li>
+    <li><strong>进场</strong>：信号日后下一个交易日开盘做多（long-only）；可选过滤器要求前一日 open-to-close 为负（连跌确认弱势）。</li>
+    <li><strong>出场</strong>：进场后下一个交易日收盘平仓，持仓约 1 天。</li>
+    <li><strong>原帖标的池</strong>：SPX 成分股，股价 &gt; $5、日均成交额 &gt; $5M；剔除财报前一天和财报当天（避开 earnings 跳空）。</li>
+    <li><strong>执行假设</strong>：原帖提到可用 MOC/MOO 拍卖单拿收盘价/开盘价——信号依赖收盘价位置，
+    能否真拿到那个价格决定结果是否可实现。</li>
+  </ul>
+
+  <h2 class="sec" id="verify">Python 回测</h2>
+  <p><code>backtest.py</code> 实现了上述规则。做了一个诚实简化：</p>
+  <ul class="tight">
+    <li><strong>标的</strong>：只用 SPY（原帖是 SPX 成分股池；单标的版本先验证信号本身是否存在）。</li>
+    <li><strong>时点</strong>：T 日收盘算信号 → T+1 开盘进 → T+1 收盘出，无未来函数；High == Low 的十字星日不给信号（避免除零）。</li>
+    <li><strong>数据</strong>：Yahoo SPY 日线（调整后价格），2020-01-02 → 2026-09-17，共 1686 根，已存盘在 <code>data/</code>。</li>
+    <li><strong>假设</strong>：未计佣金和滑点——下面会解释为什么这个假设对结论至关重要。</li>
+  </ul>
+  <table>
+    <tr><th>指标</th><th>策略（Close-Near-Low）</th><th>Baseline：SPY 买入持有</th></tr>
+    <tr><td>区间收益</td><td class="pos">+24.89%</td><td class="pos">+157.53%</td></tr>
+    <tr><td>超额收益（策略 − baseline）</td><td class="neg" colspan="2" style="text-align:center">−132.63%</td></tr>
+    <tr><td>交易次数</td><td colspan="2" style="text-align:center">326（胜率 55.52%，盈亏比 1.22，平均每笔 +0.074%）</td></tr>
+    <tr><td>最大回撤</td><td class="neg">−7.08%</td><td>—</td></tr>
+    <tr><td>样本区间</td><td colspan="2" style="text-align:center">2020-01-02 → 2026-09-17（1686 根日线）</td></tr>
+  </table>
+  <p><img src="assets/equity.png" alt="Close-Near-Low 策略 vs SPY baseline 净值曲线" style="max-width:100%"></p>
+
+  <h2 class="sec" id="takeaways">结论与局限</h2>
+  <ul class="tight">
+    <li><strong>信号本身有微弱的正期望</strong>：55.5% 胜率、盈亏比 1.22，未计成本的毛收益为正——
+    "收盘靠近当日低点 → 次日小幅反弹"这个均值回归现象，在 SPY 上确实存在一点影子。</li>
+    <li><strong>但 6 年半只赚 25%，大幅跑输 buy-and-hold</strong>：根本原因是策略只在约 19% 的时间里持仓，
+    错过了 SPY 的大牛市。这是均值回归策略在趋势市里的经典困境——<strong>机会成本</strong>。</li>
+    <li><strong>成本会吃掉剩下的利润</strong>：326 笔交易、平均每笔只赚 0.07%，一旦计入佣金和滑点，
+    毛收益很可能被吃掉大半甚至转负。这是所有 Reddit 日频换仓回测帖的通病。</li>
+  </ul>
+  <div class="callout">局限性（诚实声明）：① Reddit 原帖页面无法打开，<strong>作者名、点赞数、原帖评论未能核实</strong>，
+  策略规则来自第三方收录报告的转述，待原帖核实；② 单标的 SPY 简化版 ≠ 原帖的 SPX 成分股池版本，
+  个股层面的分散效应未被检验；③ 未计手续费/滑点；④ 若用"当前 SPX 成分股"名单回测历史，
+  会引入幸存者偏差——这是这类回测最常见的坑，本次单标的版本天然避开了它。</div>
+  <p>一句话：这个信号不是 noise，但离"可运行的系统"还差两道坎——<strong>成本</strong>和<strong>趋势市的机会成本</strong>。
+  它更适合作为组合里的一小块"反弹捕手"，而不是独立策略。</p>
+
+  <h2 class="sec" id="source">原帖链接</h2>
+  <ul class="tight">
+    <li><a href="https://www.reddit.com/r/algotrading/comments/ni1zuj/backtesting_a_close_near_low_strategy/">Reddit 原帖（本次未能直接打开，作者信息待核实）</a></li>
+    <li><a href="https://github.com/closedform/alpha-scout/blob/HEAD/content/reports/20251024-reddit-quant-alphas-gpt-5-pro.md">alpha-scout 第三方收录报告（2025-10-24）</a></li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../theme.js"></script>
+</body>
+</html>
