@@ -31,6 +31,7 @@
     <a href="#logic">为什么这样设计</a>
     <a href="#results">回测结果</a>
     <a href="#robustness">稳健性与诚实声明</a>
+    <a href="#validation">验证：成本与样本外（2026-09-18 追加）</a>
     <a href="#takeaways">结论</a>
     <a href="#source">数据与代码</a>
   </aside>
@@ -105,8 +106,35 @@
     主规格 12/12 从未在累计收益上赢过。预注册格子本身赢了、邻居格子也赢，比 cherry-pick 强，
     但对动量窗口的依赖是真实弱点，有参数挖掘嫌疑，特此声明。</li>
     <li><strong>幅度是 modest 的</strong>：超额 +20.9pp 累计、Sharpe +0.056——经得起继续验证，经不起胜利游行。</li>
-    <li><strong>未做的事</strong>：没算佣金滑点（月度调仓，量级小但应量化）、没做样本外验证（换 QQQ/个股池/换时间窗）。
-    这两项是下一步，不是已完成的。</li>
+    <li><strong>未做的事</strong>：<s>没算佣金滑点（月度调仓，量级小但应量化）、没做样本外验证（换 QQQ/个股池/换时间窗）。
+    这两项是下一步，不是已完成的。</s>已完成，见下方<a href="#validation">验证</a>一节。</li>
+  </ul>
+
+  <h2 class="sec" id="validation">验证：成本与样本外 <span style="font-size:0.65em;color:var(--muted)">（2026-09-18 追加）</span></h2>
+  <p>发布时承诺的两项验证已完成，三条腿一起测，规则全部在测试前预设：</p>
+  <p><strong>第 1 腿：加成本</strong>——主样本重跑，单边 5bps 佣金+滑点、按实际换手逐月扣除。
+  结果：+382.57% vs SPY +366.94%，超额从 +20.87pp 降到 <strong>+15.63pp</strong>（成本吃掉 5.24pp），
+  Sharpe 0.960 vs 0.911。<strong>双维度仍然赢。</strong></p>
+  <p><img src="assets/equity_leg1_cost.png" alt="加成本后变体策略 vs SPY 净值对比"></p>
+  <p><strong>第 2 腿：样本外 1999-01 → 2016-01</strong>——覆盖科网泡沫破裂 + 2008 金融危机。
+  当时只有 9 只行业 ETF（XLC/XLRE 尚未成立，排除），熊市阈值按比例预设为"≥5/9 行业 6 个月收益为负"，
+  熊市时 9 选 3，其余规则不变。
+  结果：+120.20% vs SPY +91.25%，超额 <strong>+28.95pp</strong>，Sharpe 0.356 vs 0.295。
+  <strong>双维度仍然赢，这是最硬的一块证据。</strong>
+  但诚实说一句：那个窗口里策略最大回撤 −48.7%——它不防崩盘，只是比 buy-and-hold 强。</p>
+  <p><img src="assets/equity_leg2_oos.png" alt="样本外 1999-2016 变体策略 vs SPY 净值对比"></p>
+  <p><strong>第 3 腿：换 QQQ 做核心</strong>——主样本窗口，规则不变（行业池仍是 11 个 S&amp;P 行业 ETF），
+  核心持有从 SPY 换成 QQQ。
+  结果：+541.23% vs QQQ +629.35%，超额 <strong>−88.12pp</strong>，Sharpe 打平（0.956 vs 0.956）。
+  <strong>同一套规则在 QQQ 上不成立。</strong></p>
+  <p><img src="assets/equity_leg3_qqq.png" alt="QQQ 为核心时变体策略 vs QQQ 净值对比"></p>
+  <p><strong>总 verdict</strong>：edge 对 SPY 是真的——扛过了成本，也扛过了最残酷的样本外；
+  但它不是普适的，是"SPY 专用 overlay"。regime 信号来自 S&amp;P 行业广度，
+  QQQ 这种 mega-cap 高度集中的标的，防御轮动反而拖后腿。幅度依然 modest，定位不变：SPY 核心仓上的卫星 overlay。</p>
+  <ul class="tight">
+    <li>验证脚本：<a href="validation.py">validation.py</a> ·
+    结果：<a href="results_validation.csv">results_validation.csv</a> ·
+    说明：<a href="meta_validation.json">meta_validation.json</a></li>
   </ul>
 
   <h2 class="sec" id="takeaways">结论</h2>
@@ -122,6 +150,12 @@
     <li>回测脚本：<a href="overlay.py">overlay.py</a>（主回测，预注册规格）· <a href="robustness.py">robustness.py</a>（事后参数网格）</li>
     <li>结果：<a href="results.csv">results.csv</a>（完整指标表）· <a href="slices.csv">slices.csv</a>（关键区间表现）· <a href="robustness_grid.csv">robustness_grid.csv</a>（24 格参数网格）· <a href="meta.json">meta.json</a>（规则、假设、regime 统计）</li>
     <li>图表：<a href="assets/equity.png">equity.png</a>（净值+回撤对比）· <a href="assets/regime_timeline.png">regime_timeline.png</a>（熊市月份时间线）</li>
+    <li>验证（2026-09-18 追加）：<a href="validation.py">validation.py</a> ·
+    <a href="results_validation.csv">results_validation.csv</a> ·
+    <a href="meta_validation.json">meta_validation.json</a> ·
+    <a href="assets/equity_leg1_cost.png">equity_leg1_cost.png</a> ·
+    <a href="assets/equity_leg2_oos.png">equity_leg2_oos.png</a> ·
+    <a href="assets/equity_leg3_qqq.png">equity_leg3_qqq.png</a></li>
     <li>数据：行业 ETF 日线（yfinance 自动复权，XLC 2018-06/XLRE 2015-10 成立前不进候选池，无生存偏差）；SPY 复权日线。规则细节见 meta.json。</li>
   </ul>
   <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
