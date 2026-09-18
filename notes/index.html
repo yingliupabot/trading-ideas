@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trading Ideas</title>
+<title>笔记 · Trading Ideas</title>
 <script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../styles.css">
 </head>
 <body>
 <nav class="navbar">
   <div class="nav-inner">
-    <a class="brand" href="index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <a class="brand" href="../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
     <div class="nav-links">
-      <a href="index.html" class="active">首页</a>
-      <a href="notes/">笔记</a>
+      <a href="../index.html">首页</a>
+      <a href="../notes/" class="active">笔记</a>
     </div>
     <div class="nav-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -29,20 +29,22 @@
 
 <div class="wrap">
   <div class="hero">
-    <h1>Trading Ideas</h1>
-    <p>交易脚本研读与想法记录 —— 一个持续更新的小站。</p>
+    <h1>📝 笔记</h1>
+    <p>交易脚本研读与想法记录,像博客一样持续更新。</p>
   </div>
 
-  <div class="grid">
-    <a class="card" href="notes/">
-      <span class="tag">博客</span>
-      <h3>📝 笔记</h3>
-      <p>脚本研读与交易想法,持续更新。最新:Volume Delta Footprint Map 研读。</p>
-    </a>
-  </div>
+  <a class="post-card" href="../tradingview-pine-scripts/volume-delta-footprint.html">
+    <div class="post-meta">
+      <span class="date">2026-09-17</span>
+      <span class="tag-pill">tradingview</span>
+      <span class="tag-pill">pine-script</span>
+    </div>
+    <h3>Volume Delta Footprint Map 研读</h3>
+    <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
+  </a>
 
-  <footer class="site">trading-ideas · 持续更新 · 内容仅作学习交流,不构成投资建议</footer>
+  <footer class="site">trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
 </div>
-<script src="theme.js"></script>
+<script src="../theme.js"></script>
 </body>
 </html>
