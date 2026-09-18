@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略 · Trading Ideas</title>
+<link rel="stylesheet" href="../../styles.css">
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">策略是什么</a>
+    <a href="#logic">为什么这样设计</a>
+    <a href="#results">回测结果</a>
+    <a href="#robustness">稳健性与诚实声明</a>
+    <a href="#takeaways">结论</a>
+    <a href="#source">数据与代码</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略</h1>
+    <p>34 次测试后的第一个达标者：累计收益与 Sharpe 同时跑赢 SPY buy-and-hold ·
+    自研策略，非 TradingView 脚本，思想源自 Jegadeesh-Titman 横截面动量</p>
+    <div class="post-meta">
+      <span class="date">2026-09-18</span>
+      <span class="tag-pill">strategy</span>
+      <span class="tag-pill">momentum</span>
+      <span class="tag-pill">portfolio</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">策略是什么</h2>
+  <p>先回答一个问题：<strong>这是 TradingView 上找的，还是自己想的？自己想的。</strong>
+  之前横扫了 31 个 TradingView 热门信号脚本，没有一个达标；行业动量轮动测试里发现动量在 2022 年熊市成功躲进能源股，
+  于是把"动量轮动"从替代 buy-and-hold 的策略，改造成叠加在 SPY 核心仓上的 <strong>regime overlay</strong>。
+  思想源自 <a href="../../papers/momentum-jegadeesh-titman-1993/">Jegadeesh &amp; Titman 1993</a> 的横截面动量，
+  但具体规则是本次研究中构造的。</p>
+  <p><strong>规则</strong>（测试前预先设定，非事后拼凑）：</p>
+  <ul class="tight">
+    <li>标的池：11 个 GICS 行业 ETF（XLC XLY XLP XLE XLF XLV XLI XLB XLRE XLK XLU）。</li>
+    <li>每月最后一个交易日收盘，计算 11 个行业过去 6 个月收益；若其中 <strong>≥6 个为负</strong> → 判定为熊市 regime。</li>
+    <li>熊市 regime → 次月<strong>等权持有动量最强的 3 个行业</strong>（变体规格）；非熊市 → 100% 持有 SPY。</li>
+    <li>对照的主规格：熊市时降为 40% SPY + 60% 现金。两个规格在测试前同时设定。</li>
+    <li>无未来函数：每月末收盘算排名，次个交易日起生效。</li>
+  </ul>
+  <div class="callout">样本：2016-02-01 → 2026-09-17（2673 个交易日）。变体共 28 次仓位变化，主规格 18 次。
+  未计佣金/滑点/税；现金收益记 0（保守，未计货币基金收益）。Sharpe 按 rf=0、252 天年化。</div>
+
+  <h2 class="sec" id="logic">为什么这样设计</h2>
+  <p>之前的测试给了两条线索：第一，<strong>动量在慢熊里是真实有效的 regime 信号</strong>——2022 年行业动量轮动进能源，
+  全年 −2.79% vs SPY −18.65%，不是统计幻觉；第二，<strong>纯粹的动量轮动在赢家通吃的牛市里吃亏</strong>
+  （2023–2026 年 mega-cap 科技牛市，等权 top3 天然低配集中度）。</p>
+  <p>Overlay 的思路就是取两者之长：<strong>牛市时别捣乱，100% 跟着 SPY 吃集中度红利；只在动量确认熊市时才动手</strong>，
+  动手的方式不是空仓（机会成本太大），而是躲进动量最强的防御性行业。这样熊市判断错了（误伤），代价也只是"涨得少"而不是"踏空"。</p>
+
+  <h2 class="sec" id="results">回测结果</h2>
+  <table>
+    <tr><th></th><th>SPY buy-hold</th><th>主规格 40%SPY+60%现金</th><th>变体 top3 行业</th></tr>
+    <tr><td>累计收益</td><td>+366.94%</td><td>+251.81%</td><td><strong>+387.81%</strong></td></tr>
+    <tr><td>超额收益</td><td>—</td><td>−115.14pp</td><td><strong>+20.87pp</strong></td></tr>
+    <tr><td>CAGR</td><td>15.61%</td><td>12.57%</td><td>16.08%</td></tr>
+    <tr><td>Sharpe</td><td>0.911</td><td>0.967</td><td><strong>0.966</strong></td></tr>
+    <tr><td>最大回撤</td><td>−33.72%</td><td>−21.14%</td><td>−29.66%</td></tr>
+    <tr><td>Calmar</td><td>0.46</td><td>0.59</td><td>0.54</td></tr>
+  </table>
+  <p><strong>主规格</strong>（预注册）：收益输 115pp，Sharpe 赢 0.057，回撤从 −33.7% 压到 −21.1%——典型的"用收益换波动"，不算胜者。
+  <strong>变体</strong>：累计收益与 Sharpe <strong>双维度跑赢</strong>，是 31 个指标横扫 + 行业动量 + PutWrite 之后<strong>第一个达标者</strong>。</p>
+  <p><img src="assets/equity.png" alt="变体策略 vs SPY 净值与回撤对比"></p>
+  <p><img src="assets/regime_timeline.png" alt="熊市 regime 判定时间线"></p>
+  <p><strong>关键区间表现</strong>：</p>
+  <table>
+    <tr><th>区间</th><th>SPY</th><th>主规格</th><th>变体</th></tr>
+    <tr><td>2022 全年</td><td>−18.18%</td><td>−16.49%</td><td><strong>−8.61%</strong></td></tr>
+    <tr><td>2020-02-19→03-23 快熊</td><td>−33.40%</td><td>−20.76%</td><td>−29.33%</td></tr>
+    <tr><td>2023–2026 牛市</td><td>+108.55%</td><td>+79.81%</td><td>+92.65%</td></tr>
+    <tr><td>2018-12</td><td>−8.80%</td><td>−8.80%</td><td>−8.80%</td></tr>
+  </table>
+  <p>2022 年复刻了躲进能源/防御的躲避；代价在 2023–2026 牛市：误伤让变体少赚了约 16pp——这是下面要诚实交代的部分。</p>
+
+  <h2 class="sec" id="robustness">稳健性与诚实声明</h2>
+  <ul class="tight">
+    <li><strong>误伤率 72%</strong>：130 个决策月、18 次 regime 切换、25 个熊市月份，其中 18 个的次月 SPY 是上涨的。
+    误伤集中在 2019 年初（2018-12 暴跌后的滞后信号，恰逢大反弹）、2020-04→06（V 型反弹中仍判熊市）、2025-04→05（关税冲击 V 型）。
+    但误伤代价有限：判错时持有的是防御性行业，涨得少，没踏空太多；判对时（2022）赚的是大头。</li>
+    <li><strong>参数敏感性真实存在</strong>：事后扫了 formation{6,12} × 阈值{5,6,7} × topN{2,3,4} 共 24 格——
+    formation=6 且阈值 6/7 时变体 6/6 格子双赢（超额 +11pp ~ +51pp），但 formation=12 或阈值=5 时 18/18 全输，
+    主规格 12/12 从未在累计收益上赢过。预注册格子本身赢了、邻居格子也赢，比 cherry-pick 强，
+    但对动量窗口的依赖是真实弱点，有参数挖掘嫌疑，特此声明。</li>
+    <li><strong>幅度是 modest 的</strong>：超额 +20.9pp 累计、Sharpe +0.056——经得起继续验证，经不起胜利游行。</li>
+    <li><strong>未做的事</strong>：没算佣金滑点（月度调仓，量级小但应量化）、没做样本外验证（换 QQQ/个股池/换时间窗）。
+    这两项是下一步，不是已完成的。</li>
+  </ul>
+
+  <h2 class="sec" id="takeaways">结论</h2>
+  <ul class="tight">
+    <li>机制是真实的：2022 年轮动进能源/防御不是统计幻觉，也不是 repaint 或未来函数。</li>
+    <li>它的画像和 PutWrite 互补：PutWrite 赢在慢熊抗跌、输在 V 型反弹；这个 overlay 在快熊（2020-03）也能砍掉近 40% 的跌幅，代价是 72% 的误伤率。</li>
+    <li>定位：<strong>SPY 核心仓上的卫星 overlay</strong>，不是 buy-and-hold 的替代品——这正是之前 33 次测试教我们的：别在"收益"维度上正面挑战 buy-and-hold，在"风险"维度上给它加减震器。</li>
+    <li>同期测试的 75/25 SPY+PutWrite 组合未通过：用 66pp 累计收益只换来 1.2pp 回撤改善——PutWrite 和 SPY 是同一个风险因子，这是稀释不是分散。</li>
+  </ul>
+
+  <h2 class="sec" id="source">数据与代码</h2>
+  <ul class="tight">
+    <li>回测脚本：<a href="overlay.py">overlay.py</a>（主回测，预注册规格）· <a href="robustness.py">robustness.py</a>（事后参数网格）</li>
+    <li>结果：<a href="results.csv">results.csv</a>（完整指标表）· <a href="slices.csv">slices.csv</a>（关键区间表现）· <a href="robustness_grid.csv">robustness_grid.csv</a>（24 格参数网格）· <a href="meta.json">meta.json</a>（规则、假设、regime 统计）</li>
+    <li>图表：<a href="assets/equity.png">equity.png</a>（净值+回撤对比）· <a href="assets/regime_timeline.png">regime_timeline.png</a>（熊市月份时间线）</li>
+    <li>数据：行业 ETF 日线（yfinance 自动复权，XLC 2018-06/XLRE 2015-10 成立前不进候选池，无生存偏差）；SPY 复权日线。规则细节见 meta.json。</li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../theme.js"></script>
+</body>
+</html>
