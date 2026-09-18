@@ -131,6 +131,20 @@
   <p><strong>总 verdict</strong>：edge 对 SPY 是真的——扛过了成本，也扛过了最残酷的样本外；
   但它不是普适的，是"SPY 专用 overlay"。regime 信号来自 S&amp;P 行业广度，
   QQQ 这种 mega-cap 高度集中的标的，防御轮动反而拖后腿。幅度依然 modest，定位不变：SPY 核心仓上的卫星 overlay。</p>
+  <h3 id="why-spy-not-qqq" style="margin-top:1.2em">为什么 SPY 可以、QQQ 不可以？（笔者想法）</h3>
+  <p style="color:var(--muted);font-size:0.92em">以下不是回测结论，是我对三条腿结果的理解，写下来供批判：</p>
+  <ol>
+    <li><strong>信号和标的必须是同一个宇宙。</strong>regime 信号算的是 S&amp;P 500 的 11 个行业广度，动作也是在 S&amp;P 行业里轮动。
+    对 SPY 来说，信号、动作、核心持有三者同源；对 QQQ 来说，信号描述的是另一个宇宙的风险——用 S&amp;P 的体温计给 Nasdaq 量体温，读数自然不准。</li>
+    <li><strong>QQQ 的收益来自集中度，防御轮动恰好躲开了它。</strong>QQQ 前十大权重经常占一半以上，
+    2016–2026 的 +629% 就是 mega-cap 科技复利的结果。熊市月份切到必需消费/公用事业，等于主动下车错过驱动因子。
+    叠加 72% 的误伤率——大部分"熊市"月份 QQQ 其实在涨，overlay 蹲在防御板块里看 QQQ 拉升，机会成本巨大。</li>
+    <li><strong>baseline 难度根本不同。</strong>SPY buy-hold Sharpe 0.911，QQQ 是 0.956，累计 +629% vs +367%。
+    overlay 本质是个降风险机制（熊市切防御），在 mega-cap 大牛市里，降风险 ≈ 降收益，结构上就跑不赢一个高动量的集中指数。</li>
+    <li><strong>如果真想要 QQQ 版，信号池得换。</strong>比如用 Nasdaq-100 成分股的广度（多少成分股 6 个月为负），
+    或者只用 QQQ 相关行业（XLK、XLC 等）的动量，而不是 S&amp;P 全行业。这次没测，留作以后的坑。</li>
+  </ol>
+  <p>一句话：这个 overlay 是"S&amp;P 500 行业广度 regime 策略"，不是普适择时。它赢在信号和动作同宇宙，输在换宇宙时水土不服。</p>
   <ul class="tight">
     <li>验证脚本：<a href="validation.py">validation.py</a> ·
     结果：<a href="results_validation.csv">results_validation.csv</a> ·
