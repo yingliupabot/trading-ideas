@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OHLC 之外：散户可用的数据源地图 · Trading Ideas</title>
+<link rel="stylesheet" href="../../styles.css">
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">为什么 OHLC 不够</a>
+    <a href="#types">四类数据源</a>
+    <a href="#costs">免费 vs 付费</a>
+    <a href="#takeaways">散户实操清单</a>
+    <a href="#source">关键链接</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>OHLC 之外：散户可用的数据源地图</h1>
+    <p>tick / 订单簿、期权链、资金费率、dark pool、情绪与另类数据的全景调研 ·
+    重点是散户免费或低成本能拿到的部分</p>
+    <div class="post-meta">
+      <span class="date">2026-09-18</span>
+      <span class="tag-pill">data</span>
+      <span class="tag-pill">alternative-data</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">为什么 OHLC 不够</h2>
+  <p>一句话：<strong>OHLC 只记录"成交的结果"（价格走到了哪），不记录"成交的过程"</strong>
+  （谁在买卖、意愿多强、流动性在哪）。一根大阳线，可能是主动买盘推上去的，
+  也可能是空头回补；价格上方压着多少卖单、这笔成交发生在 bid 还是 ask——
+  OHLC 一个都回答不了。下面每一类数据，都标注它能回答 OHLC 回答不了的什么问题。</p>
+  <div class="callout">一个冷知识：之前研读的两个 TradingView 脚本（Volume Delta Footprint、
+  Intrabar Profile）想做的事，本质上就是用低级别数据去<strong>近似</strong>还原 tick 级的 bid/ask 拆分。
+  TradingView 的 lower-timeframe 数据是聚合 K 线，不是真 tick——这就是数据源的天花板。</div>
+
+  <h2 class="sec" id="types">四类数据源</h2>
+  <p><strong>1. 盘口 / 微观结构数据</strong>——回答：一根大阳线是主动买盘还是空头回补？上方压着多少卖单？</p>
+  <ul class="tight">
+    <li><strong>逐笔成交 / Tick</strong>：每一笔的时间、价格、量。Footprint、Volume Delta 工具就是把 tick 按价格档聚合看方向。</li>
+    <li><strong>Level 2 订单簿</strong>："支撑阻力"不再是画线，而是真实的挂单墙；可算买卖盘不平衡、微观价格压力。</li>
+    <li>零成本技巧：没有 bid/ask 数据时，可用 <strong>Corwin-Schultz 价差估计量</strong>（2012）从日 high/low 推导有效价差，
+    给回测加一个更真实的滑点/成本假设。</li>
+  </ul>
+  <p><strong>2. 衍生品数据</strong>——回答：市场"预期"未来怎么走？杠杆堆积到什么程度？情绪是否极端？</p>
+  <ul class="tight">
+    <li><strong>期权链 / 隐含波动率</strong>：IV 是市场对未来波动的定价；skew 反映尾部恐慌；GEX 甚至能解释"价格为什么被钉在某个行权价附近"。</li>
+    <li><strong>资金费率 Funding Rate</strong>（crypto 永续合约）：多空情绪温度计，极端正费率 = 多头拥挤，常是反转信号。</li>
+    <li><strong>未平仓合约 OI</strong>：OI 上涨 + 价格上涨 = 健康趋势；OI 上涨 + 价格下跌 = 踩踏前兆。</li>
+  </ul>
+  <p><strong>3. 资金流向数据</strong>——回答：大钱在往哪流？</p>
+  <ul class="tight">
+    <li><strong>Dark Pool</strong>：美股约 30–40% 成交量发生在场外，大单 print 常被当作"聪明钱"脚印。</li>
+    <li><strong>ETF 资金流</strong>：钱在往哪个资产类别/风格/板块流（注意数据 T+1 才出）。</li>
+    <li>一句话提醒：所谓"聪明钱指标"大多是上面数据的再加工，没有魔法数据源。</li>
+  </ul>
+  <p><strong>4. 另类数据</strong>——回答：市场情绪是否极端？散户在关注什么？</p>
+  <ul class="tight">
+    <li><strong>情绪指标</strong>：CNN Fear &amp; Greed、crypto 恐惧贪婪指数、CBOE Put/Call Ratio、AAII 散户调查、VIX
+    （VIX 期限结构是否倒挂是比单点 VIX 更好的压力信号）。</li>
+    <li><strong>Google Trends</strong>：散户关注度 spike 常对应局部顶部，适合做情绪过滤器。</li>
+    <li><strong>On-chain</strong>（crypto）：交易所净流入/流出、巨鲸动向、稳定币增发。</li>
+    <li>卫星/供应链/信用卡数据基本是机构级付费（年费六位数起），散户直接忽略。</li>
+  </ul>
+
+  <h2 class="sec" id="costs">免费 vs 付费</h2>
+  <p><strong>免费且质量高的</strong>（按推荐度排序）：</p>
+  <ul class="tight">
+    <li><strong>Binance 全套衍生品数据</strong>：klines、trades、funding、OI、多空比、order book，全免费、无需 key；批量历史可下载。</li>
+    <li><strong>Yahoo Finance</strong>：日线/分钟线 + 期权链快照 + VIX（<code>yfinance</code>）。注意：期权链只有当前快照、<strong>无历史</strong>，想做回测必须自己每天定时存。</li>
+    <li><strong>FRED</strong>：美联储经济数据库，免费 key，利率/CPI/失业率/收益率曲线全有。</li>
+    <li><strong>SEC EDGAR</strong>：财报 / Form 4 内部人交易，免费。</li>
+    <li><strong>FINRA ATS</strong>：dark pool 周数据免费（延迟 2–4 周，适合研究不适合做信号）。</li>
+    <li><strong>MooTDX</strong>：A股五档盘口 + 逐笔成交免费（开源库直连通达信）。</li>
+  </ul>
+  <p><strong>付费量级</strong>（心里有数即可）：Polygon（tick+期权约 $99–199/mo）、Databento（$199/mo 起，机构级）、
+  ThetaData（$80/mo 起，历史期权 tick）、Unusual Whales（$50–150/mo，flow/dark pool/GEX）。</p>
+  <div class="callout">Yahoo 在 2025 年后加了 TLS 指纹反爬，用 <code>yfinance</code> 拉数据不稳定时，
+  换 <code>curl_cffi</code> 伪装 Chrome 通常能解决。</div>
+
+  <h2 class="sec" id="takeaways">散户实操清单</h2>
+  <ul class="tight">
+    <li><strong>① Binance 衍生品数据（funding rate + OI + 多空比）——性价比之王</strong>。
+    全免费、全历史、API 稳定，直接回答"杠杆情绪是否极端"。其中的思想（资金费率极端 = 反向信号）也可迁移到美股情绪框架里理解。</li>
+    <li><strong>② 期权链自建快照库（yfinance + 每天定时存）——回答"市场预期"</strong>。
+    零成本，每天收盘后存一份 SPY/QQQ 及持仓股的期权链，就能算 IV Rank/Percentile、put/call skew。
+    IV Rank 是期权策略最经典的择时维度（高 IV Rank 卖波动、低 IV Rank 买波动）。</li>
+    <li><strong>③ 情绪 + 宏观拼盘（FRED + Fear&amp;Greed + Put/Call + Google Trends）——最便宜的择时过滤器</strong>。
+    全免费，适合给现有策略加 regime filter（比如只在 VIX 期限结构正常、情绪非极端时才允许做多）。</li>
+  </ul>
+  <p>一句话总结：<strong>OHLC 告诉你"发生了什么"，上面这些数据告诉你"为什么发生"和"接下来可能发生什么"</strong>。
+  先把免费的三类玩熟，再考虑为美股 tick/Level 2 付费——因为微观结构数据是所有类别里最贵、
+  但对日线/波段策略加成最小的。</p>
+
+  <h2 class="sec" id="source">关键链接</h2>
+  <ul class="tight">
+    <li><a href="https://developers.binance.com/docs/binance-spot-api-docs">Binance API 文档</a> ·
+    <a href="https://data.binance.vision">Binance 历史数据批量下载</a></li>
+    <li><a href="https://fred.stlouisfed.org/docs/api/api_key.html">FRED API（免费 key）</a></li>
+    <li><a href="https://ats.finra.org">FINRA ATS（dark pool 周数据）</a></li>
+    <li><a href="https://github.com/mootdx/mootdx">MooTDX（A股盘口免费）</a></li>
+    <li><a href="https://api.alternative.me/fng/">Crypto 恐惧贪婪指数 API（免费、无需 key）</a></li>
+    <li><a href="https://www.etf.com/etfanalytics/etf-fund-flows-tool">etf.com Fund Flows 工具</a></li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../theme.js"></script>
+</body>
+</html>
