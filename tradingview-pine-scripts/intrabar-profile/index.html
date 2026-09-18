@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intrabar Profile 研读 · Trading Ideas</title>
+<link rel="stylesheet" href="../../styles.css">
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">脚本介绍</a>
+    <a href="#logic">逻辑拆解</a>
+    <a href="#verify">Python 验证</a>
+    <a href="#takeaways">结论与局限</a>
+    <a href="#source">完整源码</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>Intrabar Profile</h1>
+    <p>作者 KioseffTrading · TradingView 开源 Pine Script v6（MPL 2.0，脚本页显示发布于 2025-11-20）·
+    <a href="https://www.tradingview.com/script/j38vuAvW-Intrabar-Profile-Kioseff-Trading/">原脚本链接</a></p>
+    <div class="post-meta">
+      <span class="date">2026-09-17</span>
+      <span class="tag-pill">tradingview</span>
+      <span class="tag-pill">pine-script</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">脚本介绍</h2>
+  <p>Intrabar Profile 是一个<strong>低级别周期（lower-timeframe）profile 工具</strong>：
+  在<strong>每一根 K 线内部</strong>画出成交量分布（volume profile）或方向性
+  delta 分布（delta profile）。它想回答的不是"这根 K 线收涨还是收跌"，
+  而是——<strong>这根 K 线内部，成交量到底发生在哪里？</strong></p>
+  <ul class="tight">
+    <li><strong>Volume Profile 模式（VP）</strong>：看参与度发生在哪里、成交量集中在哪个价位、POC 和价值区落在哪。</li>
+    <li><strong>Delta Profile 模式</strong>：用低级别 K 线的涨跌方向给成交量加正负号，看买方/卖方压力在 K 线内部的哪一段占优——
+    "成交量只是存在，还是明显偏向某一方？"</li>
+    <li><strong>POC（Point of Control）</strong>：每根 K 线内部成交量最大的价位档，标黄高亮。</li>
+    <li><strong>Value Area（价值区）</strong>：从 POC 向两侧扩展、覆盖 70% 总量的价格区间，区分高参与区和低参与区。</li>
+    <li><strong>Granularity</strong>：5 分钟 / 1 分钟 / 1 秒 / 1 tick 四档（默认 1 分钟）；越细的粒度重建越精细，但取决于 TradingView 账号能拿到的数据。</li>
+  </ul>
+  <p>作者在脚本说明里给了几组解读范式：阳线 + 成交量集中在上沿 → 可能在高位被接受；
+  阳线 + 大量成交在下沿 → 可能被吸收；大 K 线 + 稀薄 profile → 快速移动、参与不均衡；
+  强 delta 但 K 线走不动 → 可能被吸收或对冲。以及一句关键定调：
+  <strong>"this is an analytical visualization tool, not a predictive engine"</strong>——
+  这是个分析可视化工具，不是预测引擎。</p>
+
+  <h2 class="sec" id="logic">逻辑拆解</h2>
+  <p>全脚本 228 行，核心就一个函数 <code>everyBarVP()</code>，对每根 chart bar 执行：</p>
+  <ul class="tight">
+    <li><strong>取 LTF 数据</strong>：<code>request.security_lower_tf("", tf, [high, low, volume * direction()])</code>，
+    拿到该 bar 内部所有低级别 K 线的高低点和<strong>带符号成交量</strong>。
+    <code>direction()</code> = <code>sign(close - close[1])</code>（tick 级用 bid/ask 判断）；注意
+    <code>close[1]</code> 是 LTF 序列上的上一根，是连续序列不断开的。</li>
+    <li><strong>分档</strong>：<code>Range = (high - low) / (rows - 1)</code>，默认 <code>rows = 11</code>，
+    档位 <code>levels[i] = low + Range * i</code>（i = 0..10）。</li>
+    <li><strong>分摊</strong>：每根 LTF bar 用 <code>binary_search_leftmost</code> 找到其 high/low 落在哪两个档位
+    <code>bot..top</code>，<code>div = 带符号成交量 / (|top - bot| + 1)</code> 平均分摊到覆盖的每一档：
+    <code>vp</code> 累加 <code>|div|</code>，<code>delta</code> 累加 <code>div</code>。</li>
+    <li><strong>POC</strong>：<code>vp</code> 最大值的档位（并列取第一个）。</li>
+    <li><strong>Value Area</strong>：从 POC 出发向上下两侧逐档扩展，累计成交量达到总量 70% 即停。</li>
+    <li><strong>显示</strong>：VP 模式把每档成交量归一化到 1–10，用 "█" 的个数画迷你 profile；
+    Delta 模式用带符号值归一化，正/负分别向左/右画；价值区外的档位变灰，POC 档标黄。</li>
+  </ul>
+  <div class="callout">读源码发现的两个小问题：① <code>tf</code> 的 switch 只映射了
+  1-Minute→"1"、1-Second→"1S"、1-Tick→"1T"，<strong>"5-Minute" 选项没有映射</strong>，
+  选它会得到 <code>na</code> 时间框架；② VA 灰显条件写的是 <code>i &lt;= indDn or i &gt;= indUp</code>，
+  按这个写法 POC 自己恰好卡在边界上（疑似 off-by-one，本意应为 <code>i &lt; indDn or i &gt; indUp</code>）。
+  我们的 Python 复刻取循环结束时的累积区间 <code>[indDn, indUp]</code> 为价值区，并在下面注明了这一差异。</div>
+
+  <h2 class="sec" id="verify">Python 验证</h2>
+  <p><code>backtest.py</code> 里的 <code>intrabar_profile()</code> 是对 <code>everyBarVP()</code> 的逐行直译
+  （档位定位、带符号成交量分摊、POC、VA 扩展循环都照搬）。时间框架映射上做了一个诚实折中：</p>
+  <ul class="tight">
+    <li><strong>资产</strong>：SPY（作者工具是通用型可视化工具，无指定资产）。</li>
+    <li><strong>周期</strong>：chart = 日线，LTF = 60 分钟。Yahoo 对 1m/5m 只保留最近约 60 天数据，
+    2 年跨度下 60m 是最小可用的日内级别；这与上一篇 v2 回测的"日线→60m"映射一致。</li>
+    <li><strong>参数</strong>：作者默认——rows = 11，value area 70%。</li>
+    <li><strong>数据</strong>：2 年小时线（2024-09-18 → 2026-09-17）已下载存档在
+    <code>tradingview-pine-scripts/intrabar-profile/data/</code>，脚本直接读本地文件。</li>
+  </ul>
+  <p><strong>Sanity 检查（501 根日线，全部通过）</strong>：每根日线的 vp 总量等于其内部
+  |带符号小时成交量| 之和（最大绝对误差 2.98e-08）；POC 档确为最大档；价值区覆盖 ≥70%；
+  delta 总量等于带符号成交量之和（符号守恒）；POC 落在价值区内。复刻逻辑可信。</p>
+  <p><strong>演示策略</strong>（规则写死、无未来函数；作者工具本身不产生信号，这里只做演示）：
+  信号在日线收盘产生——收盘 &gt; 当日 VAH（价值区上沿）→ 次日做多（高于价值区被接受→动量延续）；
+  收盘 &lt; 当日 VAL（价值区下沿）→ 次日做空；收盘在价值区内 → 空仓。
+  信号日收盘进、次日收盘出，持有 1 天；$10k 名义本金，一次一笔，无杠杆，无手续费/滑点。</p>
+  <table>
+    <tr><th>指标</th><th>策略（VA 突破演示）</th><th>Baseline：SPY 买入持有</th></tr>
+    <tr><td>区间收益</td><td class="neg">−10.98%</td><td class="pos">+35.87%</td></tr>
+    <tr><td>超额收益（策略 − baseline）</td><td class="neg" colspan="2" style="text-align:center">−46.85%</td></tr>
+    <tr><td>交易次数</td><td colspan="2" style="text-align:center">80（胜率 48.75%，盈亏比 0.71，平均每笔 −0.134%）</td></tr>
+    <tr><td>最大回撤</td><td class="neg">−16.72%</td><td>—</td></tr>
+    <tr><td>样本区间</td><td colspan="2" style="text-align:center">2024-09-18 → 2026-09-17（501 根日线）</td></tr>
+  </table>
+  <p><img src="assets/equity_curve.png" alt="演示策略 vs SPY baseline 净值曲线" style="max-width:100%"></p>
+  <p><img src="assets/profile_example.png" alt="某日 intrabar profile 重建示例" style="max-width:100%"></p>
+  <p>上图：2026-06-09（近 90 天波幅最大的一天）SPY 日内 profile 重建——黄色为 POC 档，
+  蓝色为价值区，灰色为价值区外，虚线为 VAL/VAH。11 个档位、70% 价值区，与源码算法一致。</p>
+
+  <h2 class="sec" id="takeaways">结论与局限</h2>
+  <ul class="tight">
+    <li>复刻验证通过：Python 版 profile 重建与源码算法一致，POC/价值区/delta 的数学关系都对得上。</li>
+    <li>演示策略跑输：胜率接近抛硬币（48.75%），但盈亏比只有 0.71——"收盘站上价值区就追"在两年里稳定小亏，
+    而同期 SPY 买入持有 +35.87%。单根 K 线的内部结构，不足以构成可独立运行的交易系统。</li>
+    <li>这恰好印证了作者的定调：分析可视化工具，不是预测引擎。它的价值在<strong>辅助读 K 线质量</strong>
+    （吸收 vs 失衡、接受 vs 拒绝），而不是直接生成买卖信号。</li>
+  </ul>
+  <div class="callout">局限性（诚实声明）：① delta 用小时 K 涨跌方向估算，不是交易所真实 bid/ask tick；
+  ② LTF 只有小时级，与作者默认的 1 分钟粒度有差距；③ 日线级别下每根 bar 只有约 6.5 根小时线，
+  profile 较稀疏，结论只作演示；④ 没算手续费和滑点；⑤ 发现源码有两处小问题（5-Minute 无映射、
+  VA 灰显边界 off-by-one），复刻时已注明处理方式。</div>
+
+  <h2 class="sec" id="source">完整源码</h2>
+  <p>原脚本为 TradingView 开源脚本，作者 KioseffTrading，MPL 2.0 许可，转载请注明出处并查看原页面的许可说明：</p>
+  <pre><code id="pinesrc">// Archived from TradingView for study purposes (MPL 2.0).
+// Source: https://www.tradingview.com/script/j38vuAvW-Intrabar-Profile-Kioseff-Trading/
+// All rights belong to the original author KioseffTrading.
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © KioseffTrading
+
+//@version=6
+indicator(&quot;Intrabar Profile [Kioseff Trading]&quot;, overlay = true, max_boxes_count = 500, max_labels_count = 500, max_lines_count = 500, max_polylines_count = 100, calc_bars_count = 500)
+
+
+enum granularity
+
+    m5 = &quot;5-Minute&quot;
+    m1 = &quot;1-Minute&quot;
+    s1 = &quot;1-Second&quot;
+    t1 = &quot;1-Tick&quot;
+
+profType            = input.string(defval = &quot;VP&quot;, title = &quot;Profile Type&quot;, options = [&quot;VP&quot;, &quot;Delta&quot;])
+gran                = input.enum(defval = granularity.m1, title = &quot;Granularity&quot;, options = [granularity.m5, granularity.m1, granularity.s1, granularity.t1])
+upColAdv2           = input.color(defval = #96d3c8, title = &quot;Buy-Side Color&quot;, inline = &quot;ADV UP&quot;, group = &quot;Focus Mode&quot;), upColAdv = input.color(defval = #00ffff, title = &quot;&quot;, inline = &quot;ADV UP&quot;, group = &quot;Focus Mode&quot;)
+dnColAdv2           = input.color(defval = #d39696, title = &quot;Sell-Side Color&quot;, inline = &quot;ADV DN&quot;, group = &quot;Focus Mode&quot;), dnColAdv = input.color(defval = #8f1b1b, title = &quot;&quot;, inline = &quot;ADV DN&quot;, group = &quot;Focus Mode&quot;)
+advCol              = input.color(defval = color.white, title = &quot;Text Color&quot;, group = &quot;Focus Mode&quot;)
+rows                = input.int(defval = 11, minval = 5, maxval = 200, title = &quot;Profile Rows&quot;)
+
+showVolAtLevel     = input.bool(defval = false, title = &quot;Show Volume At Level&quot;, group = &quot;Mini Profile Main Settings&quot;)
+miniProfTransp     = input.int(0, minval = 0, maxval = 100, title = &quot;Mini Profile Transparency&quot;, group = &quot;All Profile Settings&quot;)
+showVA          = input.bool(defval = true, title = &quot;Show VA&quot;, group = &quot;VA&quot;)
+customPOCcol    = input.bool(defval = true, title = &quot;&quot;, inline = &quot;POC&quot;)
+pocCol          = input.color(defval = #e5ff55, title = &quot;POC Color&quot;, inline = &quot;POC&quot;)
+
+var tf = switch gran
+
+    granularity.m1  =&gt; &quot;1&quot;
+    granularity.s1  =&gt; &quot;1S&quot;
+    granularity.t1  =&gt; &quot;1T&quot;
+
+
+direction() =&gt;
+
+    if gran == granularity.t1
+
+        switch
+
+            close == bid =&gt; -1
+            close == ask =&gt;  1
+            =&gt; math.sign(close - close[1])
+
+    else
+
+        math.sign(close - close[1])
+
+everyBarVP() =&gt;
+
+    [h, l, vol] = request.security_lower_tf(&quot;&quot;, tf, [high, low, volume * direction()])
+
+    if vol.size() &gt; 0
+
+        Range = (high - low) / (rows - 1)
+
+        levelsArr  = array.new&lt;float&gt;(rows, 0)
+        vpArr      = array.new&lt;float&gt;(rows, 0)
+        deltaArr   = array.new&lt;float&gt;(rows, 0)
+
+        for i = 0 to rows - 1
+
+            levelsArr.set(i, low + (Range * i))
+
+        for [i, data] in vol
+
+            bot = levelsArr.binary_search_leftmost(l.get(i))
+            top = levelsArr.binary_search_leftmost(h.get(i))
+
+            div    = data / (math.abs(top - bot) + 1)
+            absDiv = math.abs(div)
+
+            for x = bot to top
+
+                vpArr   .set(x, vpArr.get(x) + absDiv)
+                deltaArr.set(x, deltaArr.get(x) + div)
+
+        poc   = vpArr.indexof(vpArr.max()),
+        indUp = poc, indDn = poc, sum = 0., size = vpArr.size()
+        total = vpArr.sum() * .7
+
+        for i = 0 to size - 1
+
+            if indUp == indDn
+
+                sum += vpArr.get(indUp)
+
+                if sum &gt;= total
+                    break
+
+                indUp += 1
+                indDn -= 1
+                continue
+
+            if indUp &lt; size
+
+                sum += vpArr.get(indUp)
+
+                if sum &gt;= total
+                    break
+
+                indUp += 1
+
+            if indDn &gt; -1
+
+                sum += vpArr.get(indDn)
+
+                if sum &gt;= total
+                    break
+
+                indDn -= 1
+
+
+        if vpArr.sum() != 0
+
+            minVol = vpArr.min(), rangeVol = vpArr.range()
+
+            absDeltaArr = deltaArr   .abs()
+            minDelta    = absDeltaArr.min()
+            rangeDelta  = absDeltaArr.range()
+
+            for [i, data] in vpArr
+
+                norm = int(na), getDelta = deltaArr.get(i), absDelta = absDeltaArr.get(i)
+
+                if profType == &quot;VP&quot;
+
+                    norm := math.round(1 + ((data - minVol) * 10) / rangeVol)
+
+                else
+
+                    norm := math.round(1 + ((absDelta - minDelta) * 10) / rangeDelta)
+
+                    if math.sign(getDelta) == -1
+
+                        norm *= -1
+
+                level = levelsArr.get(i)
+                getText = &quot;█&quot;
+
+                signNorm = math.sign(norm)
+
+                if signNorm == 1 or profType == &quot;VP&quot;
+
+                    if norm &gt; 1
+                        for x = 0 to math.min(norm - 1, 9)
+                            getText += &quot;█&quot;
+
+                    if str.length(getText) &lt; 10
+
+                        for x = str.length(getText) to 10
+                            getText += &quot; &quot;
+
+                    else if str.length(getText) == 10
+
+                        getText += &quot; &quot;
+
+                else
+
+                    getText := &quot;&quot;
+
+                    width  = 11
+                    blocks = math.min(math.abs(norm), width)
+                    spaces = width - blocks
+
+                    if spaces &gt; 0
+                        for x = 0 to spaces - 1
+                            getText += &quot; &quot;
+
+                    if blocks &gt; 0
+                        for x = 0 to blocks - 1
+                            getText += &quot;█&quot;
+
+
+                volAtLevel = str.tostring(getDelta, format.volume)
+
+                if showVolAtLevel
+
+                    getText := volAtLevel + getText
+
+                col = switch math.sign(close - open)
+
+                    1  =&gt; color.new(color.from_gradient(norm, 0, 10, upColAdv, upColAdv2), miniProfTransp)
+                    -1 =&gt; color.new(color.from_gradient(norm, 0, 10, dnColAdv, dnColAdv2), miniProfTransp)
+
+                if showVolAtLevel
+
+                    if profType == &quot;VP&quot; or signNorm == 1
+
+                        getText += switch
+
+                            profType == &quot;VP&quot; =&gt; str.tostring(data, format.volume)
+                            =&gt; str.tostring(getDelta, format.volume)
+
+                if showVA
+
+                    if i &lt;= indDn or i &gt;= indUp
+
+                        col := color.new(color.gray, miniProfTransp)
+
+                if customPOCcol
+                    if i == poc
+                        col := pocCol
+
+                if profType == &quot;VP&quot; or signNorm == 1
+
+                    box.new(bar_index, level, bar_index + 1, level + Range, text = getText,
+                                                            text_halign   = text.align_left,
+                                                            text_valign   = text.align_center,
+                                                            border_color  = color(na),
+                                                            bgcolor       = #00000000,
+                                                            text_color    = col,
+                                                            force_overlay = true
+                                                            )
+
+                else
+
+                    box.new(bar_index - 1, level, bar_index, level + Range, text = getText,
+                                                            text_halign   = text.align_right,
+                                                            text_valign   = text.align_center,
+                                                            border_color  = color(na),
+                                                            bgcolor       = #00000000,
+                                                            text_color    = col,
+                                                            force_overlay = true
+                                                            )
+
+
+everyBarVP()
+</code></pre>
+
+  <footer>trading-ideas · 源码版权归原作者所有，此处仅作学习研读 · 不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../theme.js"></script>
+</body>
+</html>
