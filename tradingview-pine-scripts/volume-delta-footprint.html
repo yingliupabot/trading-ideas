@@ -58,18 +58,26 @@
   </ul>
   <div class="callout">注意：交易所真实的 bid/ask delta 数据拿不到时，只能用 K 线涨跌方向近似，这会引入误差——我们的回测就是这么近似的。</div>
 
-  <h2 class="sec" id="backtest">我们的回测验证（概念验证，非逐行复刻）</h2>
-  <p>用 5 分钟 K 线近似 lower-timeframe delta，聚合到 1 小时，加 EMA 平滑；极端 delta + 新高/新低 + 拒绝 K 线入场，
-  1.5×ATR 止损、3×ATR 止盈、最多持有 24 根 K 线。60 天样本、每笔 $10k 名义本金：</p>
+  <h2 class="sec" id="backtest">回测验证 v2（贴着原作者的做法）</h2>
+  <p>这次完全按原作者的设定重做：</p>
+  <ul class="tight">
+    <li><strong>资产</strong>：作者示例图用的是 XAUUSD / BCOUSD / NAS100USD（OANDA CFD），这里用 <strong>GLD</strong> 作为黄金现货代理（避开期货换月缺口）。</li>
+    <li><strong>周期</strong>：日线 chart，按作者代码里的自动映射用 <strong>60 分钟</strong> 做 lower timeframe；delta = 每根小时 K 收涨记 +volume、收跌记 −volume，加总到日线——正是作者文档里写的估算规则。</li>
+    <li><strong>参数</strong>：用作者默认值——delta persistence EMA(12)、minimum stripe strength 0.12、lookback 120。</li>
+    <li><strong>信号</strong>：作者的 "Find Trapped Buyers and Sellers"——强正 delta + 20 日新高处拒绝 → 做空；强负 delta + 20 日新低处拒绝 → 做多。</li>
+    <li><strong>风控</strong>：1.5×ATR(14) 止损、3×ATR 止盈、最多持有 10 个交易日；每笔 $10k 名义本金，一次一笔。</li>
+    <li><strong>数据</strong>：2 年小时 K（2024-09-18 → 2026-09-17）已下载存档在 <code>backtests/volume-delta-footprint/data/</code>，脚本直接读本地文件。</li>
+  </ul>
   <table>
-    <tr><th>标的</th><th>交易次数</th><th>胜率</th><th>策略收益</th><th>买入持有</th><th>最大回撤</th></tr>
-    <tr><td>NBIS</td><td>3</td><td>67%</td><td class="pos">+9.1%</td><td class="neg">−1.3%</td><td>−7.8%</td></tr>
-    <tr><td>NVDA</td><td>3</td><td>67%</td><td class="pos">+3.9%</td><td class="pos">+9.3%</td><td>−2.1%</td></tr>
-    <tr><td>SPY</td><td>2</td><td>100%</td><td class="pos">+1.5%</td><td class="pos">+0.5%</td><td>0%</td></tr>
-    <tr><td>BTC-USD</td><td>8</td><td>25%</td><td class="neg">−1.3%</td><td class="pos">+16.6%</td><td>−3.9%</td></tr>
+    <tr><th>指标</th><th>策略（GLD delta-fade）</th><th>Baseline：SPY 买入持有</th></tr>
+    <tr><td>区间收益</td><td class="neg">−4.06%</td><td class="pos">+36.46%</td></tr>
+    <tr><td>超额收益（策略 − baseline）</td><td class="neg" colspan="2" style="text-align:center">−40.52%</td></tr>
+    <tr><td>交易次数</td><td colspan="2" style="text-align:center">9（胜率 22%，盈亏比 0.76）</td></tr>
+    <tr><td>最大回撤</td><td class="neg">−9.18%</td><td>—</td></tr>
+    <tr><td>样本区间</td><td colspan="2" style="text-align:center">2025-03-12 → 2026-09-17（382 根日线，热身 120 天后）</td></tr>
+    <tr><td>参考：GLD 买入持有</td><td class="pos" colspan="2" style="text-align:center">+47.33%</td></tr>
   </table>
-  <div class="callout">样本只有 2–8 笔交易，统计上说明不了什么；没算手续费和滑点。结论：概念上有东西，但离能用的策略还差得远，
-  尤其在趋势强的品种（BTC）上逆势吃亏。</div>
+  <div class="callout">结论很直接：<strong>这个策略在过去两年跑输了，而且输得不少</strong>。9 笔交易、胜率 22%，同期黄金本身涨了 47%、SPY 涨了 36%——在一个大牛市里做"抓被套"的反转，等于一路接飞刀。这恰好说明了作者工具的定位：它是用来<strong>在关键位置看买卖盘失衡、辅助择时</strong>的，不是能独立跑的系统；硬把它当成反转系统，尤其是在趋势市里，会很惨。局限性：delta 是小时 K 方向估算的，不是真实 bid/ask tick；9 笔样本仍然偏小；没算手续费和滑点。</div>
 
   <h2 class="sec" id="takeaways">关键 takeaways</h2>
   <ul class="tight">
