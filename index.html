@@ -14,6 +14,7 @@
     <a class="brand" href="index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
     <div class="nav-links">
       <a href="index.html" class="active">首页</a>
+      <a href="trading.html">Trading Ideas</a>
       <a href="notes.html">读书笔记</a>
     </div>
     <div class="nav-actions">
@@ -31,108 +32,39 @@
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <h4>笔记</h4>
-    <a href="portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
-    <a href="data-sources/beyond-ohlc/">OHLC 之外数据源</a>
-    <a href="reddit-strategies/close-near-low/">Close-Near-Low 策略研读</a>
-    <a href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">ML Asset Pricing 研读</a>
-    <a href="papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
-    <a href="tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
-    <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
-    <h4>读书笔记</h4>
-    <a href="notes.html">《逃不开的经济周期》绘本笔记</a>
+    <h4>入口</h4>
+    <a href="trading.html">📈 Trading Ideas</a>
+    <a href="notes.html">📚 读书笔记</a>
   </aside>
 
   <main class="content">
     <div class="top">
       <h1>Trading Ideas</h1>
-      <p class="sub">交易脚本研读与想法记录,按时间倒序。</p>
+      <p class="sub">交易研读与读书笔记，两个入口，各走各的路。</p>
     </div>
 
-    <div class="search-wrap">
-      <input id="search" type="search" placeholder="搜索标题、tag 或关键字…" autocomplete="off">
-    </div>
-
-    <div id="post-list">
-      <a class="post-card" data-search="读书笔记 逃不开的经济周期 绘本 经济周期 book 密西西比泡沫" href="notes.html">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">读书笔记</span>
-          <span class="tag-pill">book</span>
+    <div class="entry-grid">
+      <a class="entry-card" href="trading.html">
+        <div class="entry-art trading"><span>📈</span></div>
+        <div class="entry-body">
+          <span class="tag-pill">7 篇笔记</span>
+          <h3>Trading Ideas</h3>
+          <p>交易脚本研读、策略回测与想法记录：Pine Script 指标、Reddit 策略、学术论文、数据源地图与自研组合。</p>
+          <span class="entry-go">进入 →</span>
         </div>
-        <h3>《逃不开的经济周期》绘本读书笔记</h3>
-        <p>把 33 章的经济周期史读成绘本：每章一个比喻、一幅画，画风跟着章节内容走。连载中。</p>
       </a>
-      <a class="post-card" data-search="动量 熊市 overlay regime 自研 策略 行业轮动 top3 跑赢 spy portfolio momentum strategy" href="portfolio/momentum-regime-overlay/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">strategy</span>
-          <span class="tag-pill">momentum</span>
-          <span class="tag-pill">portfolio</span>
+      <a class="entry-card" href="notes.html">
+        <div class="entry-art"><img src="读书笔记/逃不开的经济周期/assets/ch01-mississippi-bubble.webp" alt="《逃不开的经济周期》第 1 章插画"></div>
+        <div class="entry-body">
+          <span class="tag-pill">连载中 · 第 1 章已更新</span>
+          <h3>读书笔记</h3>
+          <p>《逃不开的经济周期》绘本读书笔记：33 章的经济周期史，每章一个比喻、一幅画，画风跟着故事走。</p>
+          <span class="entry-go">进入 →</span>
         </div>
-        <h3>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略</h3>
-        <p>34 次测试后的第一个达标者：累计 +387.81% vs SPY +366.94%，Sharpe 0.966 vs 0.911。熊市时轮动进动量 top3 行业，附全部代码与数据。</p>
-      </a>
-      <a class="post-card" data-search="ohlc 之外 数据源 tick 订单簿 期权链 资金费率 dark pool 情绪 另类数据 免费 binance fred" href="data-sources/beyond-ohlc/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">data</span>
-          <span class="tag-pill">alternative-data</span>
-        </div>
-        <h3>OHLC 之外：散户可用的数据源地图</h3>
-        <p>tick/订单簿、期权链、资金费率、dark pool、情绪与另类数据全景调研，附免费获取渠道和散户实操清单。</p>
-      </a>
-      <a class="post-card" data-search="close near low 均值回归 研读 reddit strategy algotrading 反弹 日线 range pct close" href="reddit-strategies/close-near-low/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">reddit</span>
-          <span class="tag-pill">strategy</span>
-        </div>
-        <h3>Close-Near-Low 均值回归策略研读</h3>
-        <p>r/algotrading 策略帖：收盘落在当日区间底部 20% 则次日做多，附 SPY 回测验证与成本警示。</p>
-      </a>
-      <a class="post-card" data-search="empirical asset pricing via machine learning 研读 paper academic machine-learning gu kelly xiu 神经网络 选股 横截面" href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">machine-learning</span>
-        </div>
-        <h3>Empirical Asset Pricing via Machine Learning 研读</h3>
-        <p>Gu-Kelly-Xiu 2020：94 个特征预测个股收益的 ML 方法赛马，附实证结果与 Avramov 反驳。</p>
-      </a>
-      <a class="post-card" data-search="returns to buying winners and selling losers 研读 paper academic momentum 动量 jegadeesh titman 因子 1993" href="papers/momentum-jegadeesh-titman-1993/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">momentum</span>
-        </div>
-        <h3>Returns to Buying Winners and Selling Losers 研读</h3>
-        <p>Jegadeesh &amp; Titman 1993 动量开山之作：买入过去赢家、卖出过去输家，附实证结果与批评梳理。</p>
-      </a>
-      <a class="post-card" data-search="intrabar profile 研读 tradingview pine-script kiosefftrading kioseff trading 成交量 分布 poc 价值区 吸收 失衡 回测" href="tradingview-pine-scripts/intrabar-profile/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Intrabar Profile 研读</h3>
-        <p>KioseffTrading 的 K 线内成交量/Delta 分布:低级别数据重建每根 K 线的 profile + POC/价值区,附 Python 复刻与演示回测。</p>
-      </a>
-      <a class="post-card" data-search="volume delta footprint map 研读 tradingview pine-script zeiierman 成交量 delta 足迹图 bid ask poc vah val 回测" href="tradingview-pine-scripts/volume-delta-footprint/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Volume Delta Footprint Map 研读</h3>
-        <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
       </a>
     </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的笔记,换个关键词试试。</p>
 
-    <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+    <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>
 </div>
 <script src="theme.js"></script>
