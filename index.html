@@ -3,19 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trading Ideas</title>
+<title>世界历史时间轴 · 读书笔记</title>
 <script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="timeline.css">
 </head>
 <body>
 <nav class="navbar">
   <div class="nav-inner">
     <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
-    <a class="brand" href="index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <a class="brand" href="../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
     <div class="nav-links">
-      <a href="index.html" class="active">首页</a>
-      <a href="trading.html">Trading Ideas</a>
-      <a href="notes.html">读书笔记</a>
+      <a href="../index.html">首页</a>
+      <a href="../trading-ideas/">Trading Ideas</a>
+      <a href="../notes.html">读书笔记</a>
+      <a href="index.html" class="active">世界地图</a>
     </div>
     <div class="nav-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -32,41 +34,55 @@
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <h4>入口</h4>
-    <a href="trading.html">📈 Trading Ideas</a>
-    <a href="notes.html">📚 读书笔记</a>
+    <h4>读书笔记</h4>
+    <a href="../notes.html">《逃不开的经济周期》目录</a>
+    <a href="index.html" class="active">🗺 世界历史时间轴</a>
   </aside>
 
-  <main class="content">
+  <main class="content tl-page">
     <div class="top">
-      <h1>Trading Ideas</h1>
-      <p class="sub">交易研读与读书笔记，两个入口，各走各的路。</p>
+      <h1>🗺 世界历史时间轴</h1>
+      <p class="sub">拖动时间轴，看历史在世界地图上一个个冒出来。经济是第一批住户，政治、战争、科技、文化随后拎包入住。</p>
     </div>
 
-    <div class="entry-grid">
-      <a class="entry-card" href="trading.html">
-        <div class="entry-art trading"><span>📈</span></div>
-        <div class="entry-body">
-          <span class="tag-pill">7 篇笔记</span>
-          <h3>Trading Ideas</h3>
-          <p>交易脚本研读、策略回测与想法记录：Pine Script 指标、Reddit 策略、学术论文、数据源地图与自研组合。</p>
-          <span class="entry-go">进入 →</span>
-        </div>
-      </a>
-      <a class="entry-card" href="notes.html">
-        <div class="entry-art"><img src="读书笔记/逃不开的经济周期/assets/ch01-mississippi-bubble.webp" alt="《逃不开的经济周期》第 1 章插画"></div>
-        <div class="entry-body">
-          <span class="tag-pill">连载中 · 第 1 章已更新</span>
-          <h3>读书笔记</h3>
-          <p>《逃不开的经济周期》绘本读书笔记：33 章的经济周期史，每章一个比喻、一幅画，画风跟着故事走。</p>
-          <span class="entry-go">进入 →</span>
-        </div>
-      </a>
+    <div class="tl-filters" id="tl-filters">
+      <button data-cat="经济" class="tag-pill tl-cat-经济">经济</button>
+      <button data-cat="政治" class="tag-pill tl-cat-政治">政治</button>
+      <button data-cat="战争" class="tag-pill tl-cat-战争">战争</button>
+      <button data-cat="科技" class="tag-pill tl-cat-科技">科技</button>
+      <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
     </div>
 
-    <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
+    <div class="tl-map-wrap">
+      <svg id="world-map" viewBox="0 0 1000 500" role="img" aria-label="世界地图">
+        <g id="tl-land"></g>
+        <g id="tl-markers"></g>
+      </svg>
+      <div class="tl-year-badge"><span id="tl-year">1720</span></div>
+      <div class="tl-popup" id="tl-popup" hidden></div>
+    </div>
+
+    <div class="tl-controls">
+      <button id="tl-play" aria-label="播放时间轴" title="播放">▶</button>
+      <div class="tl-slider-wrap">
+        <input type="range" id="tl-slider" min="1600" max="2050" step="1" value="1720" aria-label="年份">
+        <div class="tl-ticks">
+          <span>1600</span><span>1700</span><span>1800</span><span>1900</span><span>2000</span><span>2050</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-now">
+      <h3><span id="tl-now-year">1720</span> 年发生了什么</h3>
+      <div id="tl-now-list"></div>
+    </div>
+
+    <footer>trading-ideas · 世界历史时间轴 · 内容仅作学习交流</footer>
   </main>
 </div>
-<script src="theme.js"></script>
+<script src="map.js"></script>
+<script src="events.js"></script>
+<script src="timeline.js"></script>
+<script src="../theme.js"></script>
 </body>
 </html>
