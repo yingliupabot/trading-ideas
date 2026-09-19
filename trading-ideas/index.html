@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Ideas · 交易笔记</title>
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-links">
+      <a href="../index.html">首页</a>
+      <a href="index.html" class="active">Trading Ideas</a>
+      <a href="../世界地图/">世界地图</a>
+      <a href="../notes.html">读书笔记</a>
+    </div>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>笔记</h4>
+    <a href="portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
+    <a href="data-sources/beyond-ohlc/">OHLC 之外数据源</a>
+    <a href="reddit-strategies/close-near-low/">Close-Near-Low 策略研读</a>
+    <a href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">ML Asset Pricing 研读</a>
+    <a href="papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
+    <a href="tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
+    <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
+  </aside>
+
+  <main class="content">
+    <div class="top">
+      <h1>Trading Ideas</h1>
+      <p class="sub">交易脚本研读与想法记录，按时间倒序。</p>
+    </div>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="搜索标题、tag 或关键字…" autocomplete="off">
+    </div>
+    <p class="legend"><span class="dot dot-win"></span>策略跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>策略没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>资料/论文（仅供参考）</p>
+
+    <div id="post-list">
+      <a class="post-card verdict-win" data-search="动量 熊市 overlay regime 自研 策略 行业轮动 top3 跑赢 spy portfolio momentum strategy" href="portfolio/momentum-regime-overlay/">
+        <div class="post-meta">
+          <span class="date">2026-09-18</span>
+          <span class="tag-pill">strategy</span>
+          <span class="tag-pill">momentum</span>
+          <span class="tag-pill">portfolio</span>
+        </div>
+        <h3>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略</h3>
+        <p>34 次测试后的第一个达标者：累计 +387.81% vs SPY +366.94%，Sharpe 0.966 vs 0.911。熊市时轮动进动量 top3 行业，附全部代码与数据。</p>
+      </a>
+      <a class="post-card" data-search="ohlc 之外 数据源 tick 订单簿 期权链 资金费率 dark pool 情绪 另类数据 免费 binance fred" href="data-sources/beyond-ohlc/">
+        <div class="post-meta">
+          <span class="date">2026-09-18</span>
+          <span class="tag-pill">data</span>
+          <span class="tag-pill">alternative-data</span>
+        </div>
+        <h3>OHLC 之外：散户可用的数据源地图</h3>
+        <p>tick/订单簿、期权链、资金费率、dark pool、情绪与另类数据全景调研，附免费获取渠道和散户实操清单。</p>
+      </a>
+      <a class="post-card verdict-fail" data-search="close near low 均值回归 研读 reddit strategy algotrading 反弹 日线 range pct close" href="reddit-strategies/close-near-low/">
+        <div class="post-meta">
+          <span class="date">2026-09-18</span>
+          <span class="tag-pill">reddit</span>
+          <span class="tag-pill">strategy</span>
+        </div>
+        <h3>Close-Near-Low 均值回归策略研读</h3>
+        <p>r/algotrading 策略帖：收盘落在当日区间底部 20% 则次日做多，附 SPY 回测验证与成本警示。</p>
+      </a>
+      <a class="post-card" data-search="empirical asset pricing via machine learning 研读 paper academic machine-learning gu kelly xiu 神经网络 选股 横截面" href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">
+        <div class="post-meta">
+          <span class="date">2026-09-18</span>
+          <span class="tag-pill">paper</span>
+          <span class="tag-pill">academic</span>
+          <span class="tag-pill">machine-learning</span>
+        </div>
+        <h3>Empirical Asset Pricing via Machine Learning 研读</h3>
+        <p>Gu-Kelly-Xiu 2020：94 个特征预测个股收益的 ML 方法赛马，附实证结果与 Avramov 反驳。</p>
+      </a>
+      <a class="post-card" data-search="returns to buying winners and selling losers 研读 paper academic momentum 动量 jegadeesh titman 因子 1993" href="papers/momentum-jegadeesh-titman-1993/">
+        <div class="post-meta">
+          <span class="date">2026-09-18</span>
+          <span class="tag-pill">paper</span>
+          <span class="tag-pill">academic</span>
+          <span class="tag-pill">momentum</span>
+        </div>
+        <h3>Returns to Buying Winners and Selling Losers 研读</h3>
+        <p>Jegadeesh &amp; Titman 1993 动量开山之作：买入过去赢家、卖出过去输家，附实证结果与批评梳理。</p>
+      </a>
+      <a class="post-card verdict-fail" data-search="intrabar profile 研读 tradingview pine-script kiosefftrading kioseff trading 成交量 分布 poc 价值区 吸收 失衡 回测" href="tradingview-pine-scripts/intrabar-profile/">
+        <div class="post-meta">
+          <span class="date">2026-09-17</span>
+          <span class="tag-pill">tradingview</span>
+          <span class="tag-pill">pine-script</span>
+        </div>
+        <h3>Intrabar Profile 研读</h3>
+        <p>KioseffTrading 的 K 线内成交量/Delta 分布:低级别数据重建每根 K 线的 profile + POC/价值区,附 Python 复刻与演示回测。</p>
+      </a>
+      <a class="post-card verdict-fail" data-search="volume delta footprint map 研读 tradingview pine-script zeiierman 成交量 delta 足迹图 bid ask poc vah val 回测" href="tradingview-pine-scripts/volume-delta-footprint/">
+        <div class="post-meta">
+          <span class="date">2026-09-17</span>
+          <span class="tag-pill">tradingview</span>
+          <span class="tag-pill">pine-script</span>
+        </div>
+        <h3>Volume Delta Footprint Map 研读</h3>
+        <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
+      </a>
+    </div>
+    <p id="no-result" class="no-result" hidden>没有匹配的笔记,换个关键词试试。</p>
+
+    <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../theme.js"></script>
+</body>
+</html>
