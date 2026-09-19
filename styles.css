@@ -351,3 +351,51 @@ footer { color: var(--muted); font-size: 12.5px; margin-top: 40px; padding-top: 
   .brand span.brand-text { display: none; }
   .nav-inner { padding: 0 12px; }
 }
+
+/* ============ 读书笔记 · 书籍与章节 ============ */
+.book-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 18px 0;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.book-card h2 { margin: 8px 0; font-size: 22px; }
+.book-desc { color: var(--muted); font-size: 14.5px; margin: 0 0 6px; }
+.part-title {
+  font-size: 16px;
+  margin: 26px 0 12px;
+  scroll-margin-top: 80px;
+}
+.chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.chapter-cell {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  transition: border-color 0.15s, transform 0.15s;
+}
+.chapter-cell .ch-num { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.chapter-cell .ch-title { display: block; font-size: 14px; font-weight: 600; color: var(--text); }
+.chapter-cell.todo { opacity: 0.6; }
+.chapter-cell.painting { border-color: var(--accent); }
+a.chapter-cell:hover { border-color: var(--accent); text-decoration: none; transform: translateY(-2px); }
+.book-figure { margin: 18px 0; }
+.book-figure img {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  display: block;
+}
+.book-figure figcaption {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: center;
+}

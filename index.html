@@ -3,15 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trading Ideas</title>
+<title>第 1 章 · 密西西比泡沫 · 读书笔记</title>
 <script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../../../styles.css">
 </head>
 <body>
 <nav class="navbar">
   <div class="nav-inner">
     <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
-    <a class="brand" href="index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-links">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../notes.html" class="active">读书笔记</a>
+    </div>
     <div class="nav-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
         <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -27,99 +31,74 @@
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <h4>笔记</h4>
-    <a href="portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
-    <a href="data-sources/beyond-ohlc/">OHLC 之外数据源</a>
-    <a href="reddit-strategies/close-near-low/">Close-Near-Low 策略研读</a>
-    <a href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">ML Asset Pricing 研读</a>
-    <a href="papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
-    <a href="tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
-    <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
+    <h4>本站</h4>
+    <a href="../../../index.html">🏠 首页</a>
+    <a href="../../../notes.html">📝 读书笔记</a>
+    <h4>本章</h4>
+    <a href="#art">🖼️ 插画</a>
+    <a href="#metaphor">💡 比喻</a>
+    <a href="#points">📌 核心观点</a>
+    <a href="#people">👤 关键人物</a>
+    <a href="#quote">✨ 金句</a>
+    <h4>本书</h4>
+    <a href="../../../notes.html#part1">← 返回第一部分目录</a>
   </aside>
 
   <main class="content">
     <div class="top">
-      <h1>Trading Ideas</h1>
-      <p class="sub">交易脚本研读与想法记录,按时间倒序。</p>
+      <p class="sub"><a href="../../../notes.html">读书笔记</a> / 《逃不开的经济周期》 / 第一部分 · 发现经济周期——繁荣与崩溃</p>
+      <h1>第 1 章 · 密西西比泡沫</h1>
+      <div class="post-meta">
+        <span class="date">2026-09-18</span>
+        <span class="tag-pill">读书笔记</span>
+        <span class="tag-pill">book</span>
+        <span class="tag-pill">经济周期</span>
+      </div>
     </div>
 
-    <div class="search-wrap">
-      <input id="search" type="search" placeholder="搜索标题、tag 或关键字…" autocomplete="off">
+    <figure class="book-figure" id="art">
+      <img src="../assets/ch01-mississippi-bubble.webp" alt="1720 年巴黎：巨大的肥皂泡飘在暮色中的巴黎屋顶上空，泡泡里映着小小的宫殿与金币，一位年轻人伸手触碰泡泡——浪漫漫画风">
+      <figcaption>1720 年的巴黎：整座城市飘在一只巨大的肥皂泡上 —— 浪漫漫画风</figcaption>
+    </figure>
+
+    <h2 class="sec" id="metaphor">💡 比喻：一只飘在巴黎上空的肥皂泡</h2>
+    <div class="callout">
+      1720 年的巴黎人相信，纸币和一张"密西西比公司"的股票，能换来美洲大陆的黄金。于是整座城市飘了起来——脚下是一只巨大的肥皂泡，泡影里映着密西西比河的幻影。约翰·劳站在阳台上往下撒纸币，人们笑着去接，却没人抬头看：泡泡越吹越大，也越来越薄。
     </div>
 
-    <div id="post-list">
-      <a class="post-card" data-search="动量 熊市 overlay regime 自研 策略 行业轮动 top3 跑赢 spy portfolio momentum strategy" href="portfolio/momentum-regime-overlay/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">strategy</span>
-          <span class="tag-pill">momentum</span>
-          <span class="tag-pill">portfolio</span>
-        </div>
-        <h3>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略</h3>
-        <p>34 次测试后的第一个达标者：累计 +387.81% vs SPY +366.94%，Sharpe 0.966 vs 0.911。熊市时轮动进动量 top3 行业，附全部代码与数据。</p>
-      </a>
-      <a class="post-card" data-search="ohlc 之外 数据源 tick 订单簿 期权链 资金费率 dark pool 情绪 另类数据 免费 binance fred" href="data-sources/beyond-ohlc/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">data</span>
-          <span class="tag-pill">alternative-data</span>
-        </div>
-        <h3>OHLC 之外：散户可用的数据源地图</h3>
-        <p>tick/订单簿、期权链、资金费率、dark pool、情绪与另类数据全景调研，附免费获取渠道和散户实操清单。</p>
-      </a>
-      <a class="post-card" data-search="close near low 均值回归 研读 reddit strategy algotrading 反弹 日线 range pct close" href="reddit-strategies/close-near-low/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">reddit</span>
-          <span class="tag-pill">strategy</span>
-        </div>
-        <h3>Close-Near-Low 均值回归策略研读</h3>
-        <p>r/algotrading 策略帖：收盘落在当日区间底部 20% 则次日做多，附 SPY 回测验证与成本警示。</p>
-      </a>
-      <a class="post-card" data-search="empirical asset pricing via machine learning 研读 paper academic machine-learning gu kelly xiu 神经网络 选股 横截面" href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">machine-learning</span>
-        </div>
-        <h3>Empirical Asset Pricing via Machine Learning 研读</h3>
-        <p>Gu-Kelly-Xiu 2020：94 个特征预测个股收益的 ML 方法赛马，附实证结果与 Avramov 反驳。</p>
-      </a>
-      <a class="post-card" data-search="returns to buying winners and selling losers 研读 paper academic momentum 动量 jegadeesh titman 因子 1993" href="papers/momentum-jegadeesh-titman-1993/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">momentum</span>
-        </div>
-        <h3>Returns to Buying Winners and Selling Losers 研读</h3>
-        <p>Jegadeesh &amp; Titman 1993 动量开山之作：买入过去赢家、卖出过去输家，附实证结果与批评梳理。</p>
-      </a>
-      <a class="post-card" data-search="intrabar profile 研读 tradingview pine-script kiosefftrading kioseff trading 成交量 分布 poc 价值区 吸收 失衡 回测" href="tradingview-pine-scripts/intrabar-profile/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Intrabar Profile 研读</h3>
-        <p>KioseffTrading 的 K 线内成交量/Delta 分布:低级别数据重建每根 K 线的 profile + POC/价值区,附 Python 复刻与演示回测。</p>
-      </a>
-      <a class="post-card" data-search="volume delta footprint map 研读 tradingview pine-script zeiierman 成交量 delta 足迹图 bid ask poc vah val 回测" href="tradingview-pine-scripts/volume-delta-footprint/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Volume Delta Footprint Map 研读</h3>
-        <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
-      </a>
-    </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的笔记,换个关键词试试。</p>
+    <h2 class="sec" id="points">📌 核心观点</h2>
+    <ul class="tight">
+      <li>经济周期的故事，从苏格兰赌徒、金融天才约翰·劳讲起——他是历史上第一位系统玩转纸币与信用的"赌徒"。</li>
+      <li>1716 年约翰·劳在法国创办通用银行，1717 年成立密西西比公司，用纸币和股票把法国人的财富梦想吹成巨大泡沫。</li>
+      <li>1720 年泡沫破裂：纸币贬值、股票崩盘，法国经济重创，"密西西比泡沫"成为人类历史上第一次现代金融泡沫。</li>
+      <li>泡沫的剧本三百年来反复上演：<strong>新金融工具 → 狂热 → 崩盘</strong>。</li>
+    </ul>
 
-    <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+    <h2 class="sec" id="people">👤 关键人物</h2>
+    <ul class="tight">
+      <li><strong>约翰·劳 John Law（1671–1729）</strong>：苏格兰经济学家、赌徒，法国摄政王的财政顾问，纸币理论的第一个实践者。</li>
+      <li><strong>密西西比公司</strong>：以开发美洲殖民地为名发行的股票，股价一年内翻了近 20 倍，又在几个月内跌回原点。</li>
+    </ul>
+
+    <h2 class="sec" id="quote">✨ 金句</h2>
+    <div class="callout">
+      每一场泡沫破裂时，人们才想起纸终究是纸。
+      <div style="color:var(--muted);font-size:12.5px;margin-top:6px">（根据公开资料提炼，非原文逐字引用）</div>
+    </div>
+
+    <h2 class="sec">🎨 为什么这一章是浪漫漫画风？</h2>
+    <p>泡沫本身就是一场"轻飘飘的梦"——美丽、巨大、注定破裂。浪漫漫画的柔光、 pastel 色彩和闪烁星光，最能画出那种"全城人都飘起来了"的梦幻感：泡泡里映着宫殿与金币，伸手就能碰到，却一碰就碎。</p>
+
+    <p style="color:var(--muted);font-size:13px;margin-top:26px">内容根据《逃不开的经济周期》（拉斯·特维德 著）公开资料整理；细节以原书为准。</p>
+
+    <div style="display:flex;justify-content:space-between;margin-top:18px">
+      <a href="../../../notes.html#part1">← 返回第一部分目录</a>
+      <span style="color:var(--muted)">第 2 章 · 现金支付危机（待更新）</span>
+    </div>
+
+    <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>
 </div>
-<script src="theme.js"></script>
+<script src="../../../theme.js"></script>
 </body>
 </html>
