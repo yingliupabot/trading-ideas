@@ -1,0 +1,203 @@
+/* 世界历史时间轴 · 样式（浪漫漫画风） */
+:root {
+  --map-ocean-1: #dbe9f7;
+  --map-ocean-2: #f3e6f2;
+  --map-land: #f6dfE8;
+  --map-land-hover: #f2c9da;
+  --map-stroke: rgba(255, 255, 255, 0.7);
+}
+:root[data-theme="dark"] {
+  --map-ocean-1: #141c2e;
+  --map-ocean-2: #241d33;
+  --map-land: #3a4258;
+  --map-land-hover: #4a5470;
+  --map-stroke: rgba(20, 26, 40, 0.6);
+}
+
+.tl-page { max-width: 980px; }
+
+/* 分类筛选 */
+.tl-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
+.tl-filters button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tl-filters button:hover { border-color: var(--accent); }
+.tl-filters button.off { opacity: 0.35; }
+.tl-cat-经济 { color: #e0568b !important; background: rgba(224, 86, 139, 0.12) !important; }
+.tl-cat-政治 { color: #8b5cf6 !important; background: rgba(139, 92, 246, 0.12) !important; }
+.tl-cat-战争 { color: #ef6c4d !important; background: rgba(239, 108, 77, 0.12) !important; }
+.tl-cat-科技 { color: #0ea5e9 !important; background: rgba(14, 165, 233, 0.12) !important; }
+.tl-cat-文化 { color: #d97706 !important; background: rgba(217, 119, 6, 0.12) !important; }
+
+/* 地图 */
+.tl-map-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--map-ocean-1), var(--map-ocean-2));
+  box-shadow: var(--shadow);
+}
+#world-map { display: block; width: 100%; height: auto; }
+.tl-country {
+  fill: var(--map-land);
+  stroke: var(--map-stroke);
+  stroke-width: 0.7;
+  transition: fill 0.2s;
+}
+.tl-country:hover { fill: var(--map-land-hover); }
+
+/* 事件标记 */
+.tl-marker { cursor: pointer; }
+.tl-marker .tl-dot { stroke: #fff; stroke-width: 1.6; filter: drop-shadow(0 0 5px currentColor); }
+.tl-marker .tl-halo { fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0; }
+.tl-marker .tl-spark { display: none; font-size: 15px; text-anchor: middle; fill: currentColor; }
+.tl-marker.st-past { opacity: 0.55; }
+.tl-marker.st-past .tl-dot { r: 4; }
+.tl-marker.st-now .tl-halo { opacity: 0.85; animation: tl-ping 1.6s ease-out infinite; }
+.tl-marker.st-now .tl-spark { display: block; animation: tl-twinkle 1.6s ease-in-out infinite; }
+.cat-经济 { color: #e0568b; }
+.cat-政治 { color: #8b5cf6; }
+.cat-战争 { color: #ef6c4d; }
+.cat-科技 { color: #0ea5e9; }
+.cat-文化 { color: #d97706; }
+.cat-经济 .tl-dot { fill: #e0568b; }
+.cat-政治 .tl-dot { fill: #8b5cf6; }
+.cat-战争 .tl-dot { fill: #ef6c4d; }
+.cat-科技 .tl-dot { fill: #0ea5e9; }
+.cat-文化 .tl-dot { fill: #d97706; }
+@keyframes tl-ping {
+  0% { r: 8; opacity: 0.9; }
+  100% { r: 26; opacity: 0; }
+}
+@keyframes tl-twinkle {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* 年份徽章 */
+.tl-year-badge {
+  position: absolute;
+  top: 12px; left: 16px;
+  pointer-events: none;
+}
+.tl-year-badge span {
+  font-size: clamp(34px, 6vw, 54px);
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: linear-gradient(120deg, var(--text) 30%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+/* 弹窗 */
+.tl-popup {
+  position: absolute;
+  width: min(300px, 72%);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+.tl-popup h4 { margin: 8px 0 2px; font-size: 16px; }
+.tl-popup-place { color: var(--muted); font-size: 12.5px; margin: 0 0 6px; }
+.tl-popup p { font-size: 13.5px; color: var(--muted); margin: 6px 0; }
+.tl-popup-link { font-size: 13.5px; font-weight: 600; }
+
+/* 播放控制 */
+.tl-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 6px;
+}
+#tl-play {
+  flex-shrink: 0;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--accent), #e0568b);
+  color: #fff;
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s;
+}
+#tl-play:hover { transform: scale(1.06); }
+#tl-play.playing { animation: tl-twinkle 1.2s ease-in-out infinite; }
+.tl-slider-wrap { flex: 1; }
+#tl-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--accent), #e0568b, #8b5cf6);
+  outline: none;
+  cursor: pointer;
+}
+#tl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 12px var(--card-glow);
+  cursor: grab;
+}
+#tl-slider::-moz-range-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 12px var(--card-glow);
+  cursor: grab;
+}
+.tl-ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+/* 这一年发生了什么 */
+.tl-now { margin-top: 26px; }
+.tl-now h3 { font-size: 19px; margin: 0 0 12px; }
+.tl-now h3 span {
+  background: linear-gradient(120deg, var(--accent), #e0568b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.tl-now-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 10px 0;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.tl-now-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+.tl-now-item strong { font-size: 15.5px; margin-left: 8px; }
+.tl-now-place { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
+.tl-now-item p { margin: 8px 0 4px; color: var(--muted); font-size: 14px; }
+.tl-now-item a { font-size: 13.5px; font-weight: 600; }
+.tl-empty { color: var(--muted); font-size: 14.5px; padding: 18px 0; }
+
+@media (max-width: 560px) {
+  .tl-popup { width: 78%; }
+}
