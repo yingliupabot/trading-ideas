@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Returns to Buying Winners and Selling Losers 研读 · Trading Ideas</title>
+<link rel="stylesheet" href="../../../styles.css">
+<script>(function(){try{var t=localStorage.getItem('ti-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">论文信息</a>
+    <a href="#logic">核心思想与策略构造</a>
+    <a href="#results">实证结果</a>
+    <a href="#takeaways">批评、局限与启发</a>
+    <a href="#source">原文链接</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>Returns to Buying Winners and Selling Losers</h1>
+    <p>Jegadeesh &amp; Titman · 1993 年《Journal of Finance》· 动量因子的开山之作 ·
+    <a href="https://smallake.kr/wp-content/uploads/2015/01/Jegadeesh_Titman_1993.pdf">免费 PDF</a></p>
+    <div class="post-meta">
+      <span class="date">2026-09-18</span>
+      <span class="tag-pill">paper</span>
+      <span class="tag-pill">academic</span>
+      <span class="tag-pill">momentum</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">论文信息</h2>
+  <ul class="tight">
+    <li><strong>标题</strong>：Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency</li>
+    <li><strong>作者</strong>：Narasimhan Jegadeesh、Sheridan Titman</li>
+    <li><strong>发表</strong>：1993 年，《Journal of Finance》Vol. 48, No. 1, pp. 65–91</li>
+    <li><strong>数据</strong>：NYSE + AMEX 全部股票，1965–1989；另用 1927–1964 做样本外稳健性检验</li>
+    <li><strong>一句话</strong>：过去 3–12 个月涨得好的股票，未来 3–12 个月继续涨——买入过去赢家、卖出过去输家能赚钱。</li>
+  </ul>
+
+  <h2 class="sec" id="logic">核心思想与策略构造</h2>
+  <p>论文检验的是<strong>中期动量效应</strong>：市场对公司特质信息反应不足，
+  好消息/坏消息要花几个月才完全反映到价格里。策略构造极其干净：</p>
+  <ul class="tight">
+    <li><strong>形成期 J / 持有期 K</strong>：每月按过去 J 个月收益把股票分成十档，
+    做多最高十分位（过去赢家）、做空最低十分位（过去输家），持有 K 个月。J/K 各取 3、6、9、12，共 16 种组合。</li>
+    <li><strong>重叠组合</strong>：每月都建一个新组合、持有 K 个月，用重叠持仓提高检验效力、平滑单月噪音。</li>
+    <li><strong>跳过一周</strong>：部分版本在形成期和持有期之间空出一周，排除买卖价差、价格压力等微观结构噪音——
+    这是对"策略利润是不是 bid-ask bounce 假象"的直接回应，细节见真章。</li>
+  </ul>
+  <div class="callout">这个构造后来成了整个因子研究的模板：排序 → 分十档 → 多空对冲 → 重叠持有。
+  几乎所有横截面策略论文都在复用这套骨架。</div>
+
+  <h2 class="sec" id="results">实证结果</h2>
+  <ul class="tight">
+    <li>16 种 J/K 组合的动量收益<strong>全部为正</strong>，多数统计显著；最赚钱的组合约<strong>每月 1% 的超额收益（年化约 12%）</strong>，
+    其中 J=12（跳过一周）、K=3 的版本最赚钱，文中重点分析 6 个月/6 个月版本。</li>
+    <li>利润<strong>不能被系统性风险解释</strong>：beta 和规模都解释不掉；也不能被 Lo &amp; MacKinlay 的 lead-lag 效应（共同因子延迟反应）解释，
+    与"对公司特质信息反应不足"的故事一致。</li>
+    <li><strong>动量会衰减和反转</strong>：6/6 组合在形成后 12 个月累计 +9.5%，但随后 24 个月回吐超过一半；
+    财报公告日前后的漂移呈现同样模式——赢家前 7 个月公告日收益高，之后 13 个月输家反超。这是"动量→反转"衔接的最早实证之一。</li>
+  </ul>
+
+  <h2 class="sec" id="takeaways">批评、局限与启发</h2>
+  <ul class="tight">
+    <li><strong>Conrad &amp; Kaul (1998)</strong>：动量利润可能是横截面预期收益差异 + 数据挖掘的产物，而非真实的序列相关。</li>
+    <li><strong>Lesmond, Schill &amp; Zhou (2004)《The Illusory Nature of Momentum Profits》</strong>：
+    动量股票恰恰是交易成本最高的股票，扣除合理交易成本后利润基本被吃掉——纸面收益 vs 可实现收益的经典警示。</li>
+    <li><strong>Daniel &amp; Moskowitz (2016)《Momentum Crashes》</strong>：熊市末期反转时动量会崩盘——
+    1932 年 6–8 月跌约 91%，2009 年 3–5 月三个月跌超 73%（做空的输家组合 3 个月暴涨 156%）。动量是"平时收租、危机交租"的策略。</li>
+    <li>作者自己在 2023 年的 30 周年综述里也承认：2000 年后部分市场的动量表现衰减。</li>
+  </ul>
+  <div class="callout">诚实声明：本篇为论文研读，未做独立 Python 复刻（完整复刻需要 CRSP 全市场月度数据）。
+  简化复刻思路：用 yfinance 取数十只大盘股，按过去 6 个月收益排序、每月调仓做多做空十分位，
+  以 SPY 为 baseline 对照——可作为后续验证动手的方向。论文报告的收益均为论文内数字，未计我们自己的成本假设。</div>
+  <p>启发：动量是学术界→实盘转化最成功的策略之一，但三条红线要记牢——
+  <strong>交易成本、动量崩盘、样本外衰减</strong>。任何动量回测若不建模成本、不检验危机期表现，数字都不可信。</p>
+
+  <h2 class="sec" id="source">原文链接</h2>
+  <ul class="tight">
+    <li><a href="https://smallake.kr/wp-content/uploads/2015/01/Jegadeesh_Titman_1993.pdf">免费全文 PDF（27 页，已验证可打开）</a></li>
+    <li><a href="https://onlinelibrary.wiley.com/doi/10.1111/j.1540-6261.1993.tb04702.x">Wiley 官方页（需付费）</a></li>
+    <li><a href="http://www-stat.wharton.upenn.edu/~steele/Courses/434/434Context/Momentum/MomentumStrategiesJF2001.pdf">续作 Jegadeesh &amp; Titman 2001 免费 PDF（对照阅读）</a></li>
+    <li><a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4602426">作者 2023 年 30 周年综述（SSRN）</a></li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../../theme.js"></script>
+</body>
+</html>
