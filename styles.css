@@ -16,6 +16,10 @@
   --code-text: #dbe4ee;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --card-glow: rgba(88, 166, 255, 0.18);
+  --win-bg: rgba(63, 185, 80, 0.09);
+  --win-border: rgba(63, 185, 80, 0.45);
+  --fail-bg: rgba(248, 81, 73, 0.08);
+  --fail-border: rgba(248, 81, 73, 0.4);
 }
 :root[data-theme="light"] {
   --bg: #ffffff;
@@ -33,6 +37,10 @@
   --code-text: #1f2328;
   --shadow: 0 10px 30px rgba(31, 35, 40, 0.1);
   --card-glow: rgba(9, 105, 218, 0.12);
+  --win-bg: rgba(26, 127, 55, 0.07);
+  --win-border: rgba(26, 127, 55, 0.4);
+  --fail-bg: rgba(207, 34, 46, 0.06);
+  --fail-border: rgba(207, 34, 46, 0.35);
 }
 
 /* ============ 基础 ============ */
@@ -311,6 +319,15 @@ footer { color: var(--muted); font-size: 12.5px; margin-top: 40px; padding-top: 
 .post-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--accent); text-decoration: none; }
 .post-card h3 { margin: 6px 0 8px; font-size: 19px; }
 .post-card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* ============ 回测结论配色 ============ */
+.post-card.verdict-win { background: var(--win-bg); border-color: var(--win-border); }
+.post-card.verdict-fail { background: var(--fail-bg); border-color: var(--fail-border); }
+.legend { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+.legend .dot { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.legend .dot-win { background: var(--win-bg); border: 1px solid var(--win-border); }
+.legend .dot-fail { background: var(--fail-bg); border: 1px solid var(--fail-border); }
+.legend .dot-info { background: var(--panel); border: 1px solid var(--border); }
 
 /* ============ 搜索框 ============ */
 .search-wrap { margin: 20px 0 4px; }
