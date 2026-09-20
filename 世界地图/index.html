@@ -2,88 +2,94 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>世界历史时间轴 · 读书笔记</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>世界历史时间轴 · Trading Ideas</title>
 <script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="stylesheet" href="../styles.css">
 <link rel="stylesheet" href="timeline.css">
 </head>
-<body>
-<nav class="navbar">
-  <div class="nav-inner">
-    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
-    <a class="brand" href="../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
-    <div class="nav-links">
-      <a href="../index.html">首页</a>
-      <a href="../trading-ideas/">Trading Ideas</a>
-      <a href="../notes.html">读书笔记</a>
-      <a href="index.html" class="active">世界地图</a>
-    </div>
-    <div class="nav-actions">
-      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
-        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-      </button>
-      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
-        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
-      </a>
-    </div>
+<body class="tl-immersive">
+
+<!-- 地图舞台:铺满视口,海洋渐变延伸到边缘 -->
+<div class="tl-stage">
+  <div class="tl-map-wrap">
+    <svg id="world-map" viewBox="0 0 1000 500" role="img" aria-label="世界地图,标记随年份出现">
+      <g id="tl-land"></g>
+      <g id="tl-markers"></g>
+    </svg>
+    <div class="tl-popup" id="tl-popup" hidden></div>
   </div>
-</nav>
-<div class="scrim" id="scrim"></div>
+</div>
 
-<div class="layout">
-  <aside class="sidebar" id="sidebar">
-    <h4>读书笔记</h4>
-    <a href="../notes.html">《逃不开的经济周期》目录</a>
-    <a href="index.html" class="active">🗺 世界历史时间轴</a>
-  </aside>
+<!-- 顶栏:浮在地图上的玻璃条 -->
+<header class="tl-topbar">
+  <a class="tl-back" href="../notes.html">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>读书笔记</span>
+  </a>
+  <div class="tl-heading">
+    <h1>🗺 世界历史时间轴</h1>
+    <p>经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+  </div>
+  <div class="tl-topbar-actions">
+    <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+      <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+    </a>
+  </div>
+</header>
 
-  <main class="content tl-page">
-    <div class="top">
-      <h1>🗺 世界历史时间轴</h1>
-      <p class="sub">拖动时间轴，看历史在世界地图上一个个冒出来。经济是第一批住户，政治、战争、科技、文化随后拎包入住。</p>
-    </div>
+<!-- 右侧事件面板:分类名以文字呈现,兜住低对比度色的可读性 -->
+<aside class="tl-panel" id="tl-panel">
+  <button class="tl-panel-toggle" id="tl-panel-toggle" aria-expanded="true" aria-controls="tl-panel-body" title="收起/展开">
+    <h3><span id="tl-now-year">1720</span> 年发生了什么</h3>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="tl-panel-body" id="tl-panel-body">
+    <div id="tl-now-list"></div>
+  </div>
+</aside>
 
-    <div class="tl-filters" id="tl-filters">
-      <button data-cat="经济" class="tag-pill tl-cat-经济">经济</button>
-      <button data-cat="政治" class="tag-pill tl-cat-政治">政治</button>
-      <button data-cat="战争" class="tag-pill tl-cat-战争">战争</button>
-      <button data-cat="科技" class="tag-pill tl-cat-科技">科技</button>
-      <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
-    </div>
-
-    <div class="tl-map-wrap">
-      <svg id="world-map" viewBox="0 0 1000 500" role="img" aria-label="世界地图">
-        <g id="tl-land"></g>
-        <g id="tl-markers"></g>
-      </svg>
-      <div class="tl-year-badge"><span id="tl-year">1720</span></div>
-      <div class="tl-popup" id="tl-popup" hidden></div>
-    </div>
-
-    <div class="tl-controls">
-      <button id="tl-play" aria-label="播放时间轴" title="播放">▶</button>
-      <div class="tl-slider-wrap">
-        <input type="range" id="tl-slider" min="1600" max="2050" step="1" value="1720" aria-label="年份">
-        <div class="tl-ticks">
-          <span>1600</span><span>1700</span><span>1800</span><span>1900</span><span>2000</span><span>2050</span>
-        </div>
+<!-- 底部控制坞 -->
+<div class="tl-dock">
+  <div class="tl-filters" id="tl-filters" role="group" aria-label="按分类筛选">
+    <button data-cat="经济" class="tag-pill tl-cat-经济">经济</button>
+    <button data-cat="政治" class="tag-pill tl-cat-政治">政治</button>
+    <button data-cat="战争" class="tag-pill tl-cat-战争">战争</button>
+    <button data-cat="科技" class="tag-pill tl-cat-科技">科技</button>
+    <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
+  </div>
+  <div class="tl-transport">
+    <div class="tl-year-badge"><span id="tl-year">1720</span></div>
+    <button id="tl-play" aria-label="播放时间轴" title="播放">▶</button>
+    <div class="tl-slider-wrap">
+      <input type="range" id="tl-slider" min="1600" max="2050" step="1" value="1720" aria-label="年份">
+      <div class="tl-ticks">
+        <span>1600</span><span>1700</span><span>1800</span><span>1900</span><span>2000</span><span>2050</span>
       </div>
     </div>
-
-    <div class="tl-now">
-      <h3><span id="tl-now-year">1720</span> 年发生了什么</h3>
-      <div id="tl-now-list"></div>
-    </div>
-
-    <footer>trading-ideas · 世界历史时间轴 · 内容仅作学习交流</footer>
-  </main>
+  </div>
 </div>
+
 <script src="map.js"></script>
 <script src="events.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>
+<script>
+/* 面板收起/展开 */
+(function () {
+  var btn = document.getElementById("tl-panel-toggle");
+  var panel = document.getElementById("tl-panel");
+  if (!btn || !panel) return;
+  btn.addEventListener("click", function () {
+    var collapsed = panel.classList.toggle("collapsed");
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  });
+})();
+</script>
 </body>
 </html>

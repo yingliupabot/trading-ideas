@@ -43,6 +43,12 @@
     g.setAttribute("transform", "translate(" + xy[0] + "," + xy[1] + ")");
     g.dataset.idx = i;
 
+    /* 不可见热区:圆点本身只有 r=6,窄屏上渲染不到 7px,手指点不中。
+       r 取 12 是上限——巴黎和伦敦在世界比例尺下只隔约 10 个单位,再大就互相抢点击 */
+    var hit = document.createElementNS(NS, "circle");
+    hit.setAttribute("r", "12");
+    hit.setAttribute("class", "tl-hit");
+
     var halo = document.createElementNS(NS, "circle");
     halo.setAttribute("r", "14");
     halo.setAttribute("class", "tl-halo");
@@ -54,6 +60,7 @@
     spark.setAttribute("y", "-16");
     spark.textContent = "✦";
 
+    g.appendChild(hit);
     g.appendChild(halo);
     g.appendChild(dot);
     g.appendChild(spark);
