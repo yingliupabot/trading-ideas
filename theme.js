@@ -7,6 +7,17 @@
     try { localStorage.setItem("ti-theme", t); } catch (e) {}
   }
 
+  /* 首次访问跟随系统(初值在各页 head 的内联脚本里定,避免闪白);
+     只要用户没手动点过切换按钮,系统主题变了这里也跟着变 */
+  var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)");
+  if (mq && mq.addEventListener) {
+    mq.addEventListener("change", function (e) {
+      var picked = null;
+      try { picked = localStorage.getItem("ti-theme"); } catch (err) {}
+      if (!picked) root.setAttribute("data-theme", e.matches ? "light" : "dark");
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     /* 主题切换按钮 */
     var toggle = document.getElementById("theme-toggle");
