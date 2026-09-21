@@ -35,6 +35,7 @@
   --globe-land: #f2e9cf; --globe-land-hover: #f9f4e2; --globe-stroke: #8a6b2e;  /* 金线勾边 */
   --space-1: #e8dcbc; --space-2: #dccba4;
   --atmos: rgba(184, 134, 11, 0.30);       /* 金箔的光 */
+  --atmos-2: rgba(160, 44, 44, 0.10);      /* 朱砂的余韵 */
 }
 /* ---- 大航海:波特兰海图(chart.css 的基准,这里只做微调) ---- */
 :root[data-era="sail"] {
@@ -50,6 +51,7 @@
   --globe-land: #eef3f3; --globe-land-hover: #f8fbfb; --globe-stroke: #4a5f6b;
   --space-1: #d5dddd; --space-2: #c4cfd0;
   --atmos: rgba(31, 95, 122, 0.22);
+  --globe-cast: rgba(52, 70, 80, 0.34);   /* 冷色纸配暖影会发脏 */
 }
 /* ---- 现代:新闻纸 ---- */
 :root[data-era="modern"] {
@@ -61,6 +63,7 @@
   --globe-land: #f2f0ea; --globe-land-hover: #fafaf6; --globe-stroke: #5c5850;
   --space-1: #e1ded6; --space-2: #d4d0c7;
   --atmos: rgba(90, 86, 78, 0.18);
+  --globe-cast: rgba(62, 60, 54, 0.32);   /* 冷色纸配暖影会发脏 */
 }
 /* ---- 当代:干净的中性纸 ---- */
 :root[data-era="contemp"] {
@@ -72,6 +75,7 @@
   --globe-land: #f4f2ec; --globe-land-hover: #fcfbf7; --globe-stroke: #5f5b52;
   --space-1: #e6e3dc; --space-2: #d9d5cd;
   --atmos: rgba(47, 109, 95, 0.20);
+  --globe-cast: rgba(58, 62, 60, 0.32);   /* 冷色纸配暖影会发脏 */
 }
 
 /* 深色模式下各时代只压暗,不改色相,否则七套暗色配不过来 */
@@ -81,12 +85,17 @@
   --rule: rgba(190, 168, 130, 0.26);
   --globe-land: #5a4b34; --globe-land-hover: #6d5c41; --globe-stroke: #cbb489;
   --space-1: #241d14; --space-2: #17120c;
+  /* 时代规则和主题规则同权重,后写的赢;这里要把上面冷色纸的投影压回来 */
+  --globe-cast: rgba(0, 0, 0, 0.55);
 }
 :root[data-theme="dark"][data-era="medieval"] { --globe-sea-1: #2a3557; --globe-sea-2: #1f2841; --globe-sea-3: #161c2e; }
 :root[data-theme="dark"][data-era="industrial"] { --globe-sea-1: #23343d; --globe-sea-2: #1a262d; --globe-sea-3: #121a1f; }
 
 /* 换纸时让颜色缓过去,不要硬切 */
-.tl-stage, .tl-panel, .tl-dock, .tl-heading, .tl-back, .tl-topbar-actions, .tl-dossier-sheet {
+/* 换纸时颜色缓过去。注意别把卷轴的纸列进来:这条 transition 会整条覆盖掉
+   timeline.css 里那条 clip-path,纸就变成"啪"地一下全开(实测踩过)。
+   卷轴的换色写在它自己那条 transition 里。 */
+.tl-stage, .tl-panel, .tl-dock, .tl-heading, .tl-back, .tl-topbar-actions {
   transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
 }
 

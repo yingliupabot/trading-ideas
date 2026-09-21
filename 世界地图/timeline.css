@@ -15,6 +15,17 @@
   --stage-vignette: rgba(120, 130, 170, 0.16);
   --glass: rgba(255, 255, 255, 0.72);
   --glass-edge: rgba(255, 255, 255, 0.85);
+
+  /* 顶栏底边 / 控制坞从视口底边往上占掉的高度。
+     timeline.js 加载后用实测值覆盖;这里的数只在那之前撑一下场面。
+     所有"别撞上 chrome"的尺寸都从这两个数算,不再手写。 */
+  --top-h: 96px;
+  --dock-h: 240px;
+  /* 宽屏上右边那一列归事件面板,球和控制坞在剩下的空当里居中。
+     不让开的话球会挤到面板边上,左边却空着半个屏幕 */
+  --gutter-r: 0px;
+  /* 左舷:国家视图里小地球占的那一列。全局视图为 0 */
+  --gutter-l: 0px;
 }
 :root[data-theme="dark"] {
   /* 深色:深空里的地球 */
@@ -47,6 +58,10 @@ body.tl-immersive {
   inset: 0;
   display: grid;
   place-items: center;
+  /* 上下各让出顶栏和控制坞的高度,居中才是"可用区域的中心"而不是视口中心。
+     不这么做,加高控制坞之后地球下缘会被直接压掉一截。 */
+  padding: calc(var(--top-h) + 24px) var(--gutter-r) calc(var(--dock-h) + 24px) var(--gutter-l);
+  box-sizing: border-box;
   background: linear-gradient(150deg, var(--space-1), var(--space-2));
 }
 /* 中心提亮 + 四周压暗:让视线落在地图上,留白成为氛围 */
@@ -55,18 +70,46 @@ body.tl-immersive {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* 提亮的中心要跟着球走,不是跟着视口走 */
   background:
-    radial-gradient(58% 52% at 50% 46%, var(--stage-glow), transparent 70%),
-    radial-gradient(120% 100% at 50% 50%, transparent 52%, var(--stage-vignette));
+    radial-gradient(58% 52% at calc(50% + (var(--gutter-l) - var(--gutter-r)) / 2) 46%, var(--stage-glow), transparent 70%),
+    radial-gradient(120% 100% at calc(50% + (var(--gutter-l) - var(--gutter-r)) / 2) 50%, transparent 52%, var(--stage-vignette));
 }
 .tl-globe-wrap { z-index: 1; }
 
 /* 正方形。弹窗按容器百分比定位(viewBox -120..120 → 0..100%),不能被拉伸 */
 .tl-globe-wrap {
   position: relative;
-  width: min(88vmin, 720px);
+  /* 四个上限取最小:视口短边、绝对上限、扣掉上下 chrome 后剩的高度、
+     以及让开面板那一列之后剩的宽度。少了最后一条,1024 宽的屏上
+     球按高度算出来有 393,横着就捅进面板里了 */
+  width: min(88vmin, 720px,
+             calc(100dvh - var(--top-h) - var(--dock-h) - 56px),
+             calc(100vw - var(--gutter-l) - var(--gutter-r) - 48px));
   aspect-ratio: 1;
 }
+/* 放大 = 把镜头凑到球面上。这时球早就比容器大了,
+   画布满幅就是一块硬边的矩形海,SVG 的航向线还顺着
+   overflow:visible 铺满整页。裁成圆窗把两件事一起解决:
+   凑近看球,本来就是从一个圆孔里看出去的 */
+.tl-globe-wrap.zoomed {
+  overflow: hidden;
+  border-radius: 50%;
+}
+/* 圆窗要有一道画上去的边,不能只是被裁掉。
+   内阴影不受 overflow:hidden 影响,外投影会被裁,所以只用内的 */
+.tl-globe-wrap.zoomed::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 0 1.5px var(--globe-limb, transparent),
+    inset 0 0 26px -6px var(--globe-cast, transparent);
+}
+
 #tl-canvas {
   position: absolute;
   inset: 0;
@@ -93,8 +136,10 @@ body.tl-immersive {
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
+  /* 第二圈原来硬编码成紫色(深空主题的遗留),在牛皮纸上会飘一圈紫雾。
+     改成走变量,由各时代的纸自己决定。 */
   background: radial-gradient(circle at 50% 50%,
-    transparent 40.2%, var(--atmos) 42%, rgba(139, 92, 246, 0.14) 44.5%, transparent 48%);
+    transparent 40.2%, var(--atmos) 42%, var(--atmos-2, transparent) 44.5%, transparent 48%);
   filter: blur(4px);
 }
 
@@ -194,11 +239,13 @@ body.tl-immersive {
 /* ============ 右侧事件面板 ============ */
 .tl-panel {
   position: fixed;
-  top: 50%;
+  /* 吊在顶栏下面,高度随条目多少自己长,长到顶着控制坞为止。
+     原来上下两头都钉死:控制坞一长高右下角就叠上去,收起时又留一个空玻璃盒 */
+  top: calc(var(--top-h) + 16px);
   right: max(14px, env(safe-area-inset-right));
-  transform: translateY(-50%);
+  transform: none;
   width: min(340px, calc(100vw - 28px));
-  max-height: min(520px, calc(100dvh - 260px));
+  max-height: calc(100dvh - var(--top-h) - var(--dock-h) - 28px);
   z-index: 15;
   display: flex;
   flex-direction: column;
@@ -234,6 +281,7 @@ body.tl-immersive {
 .tl-panel.collapsed .tl-panel-toggle svg { transform: rotate(-90deg); }
 .tl-panel-body {
   overflow-y: auto;
+  min-height: 0;
   padding: 0 16px 16px;
   overscroll-behavior: contain;
 }
@@ -243,9 +291,10 @@ body.tl-immersive {
 .tl-dock {
   position: fixed;
   bottom: max(16px, env(safe-area-inset-bottom));
-  left: 50%;
+  /* 和球共用一根中轴,不然球让开了、坞还杵在视口正中,两件东西会错位 */
+  left: calc(50% + (var(--gutter-l) - var(--gutter-r)) / 2);
   transform: translateX(-50%);
-  width: min(880px, calc(100vw - 28px));
+  width: min(880px, calc(100vw - var(--gutter-l) - var(--gutter-r) - 28px));
   z-index: 20;
   padding: 14px 18px 16px;
   border-radius: 20px;
@@ -410,27 +459,60 @@ body.tl-immersive {
 .tl-empty { color: var(--muted); font-size: 14px; padding: 4px 0 8px; margin: 0; }
 
 /* ============ 窄屏 ============ */
+/* ============ 瘦身版控制坞 ============
+ * 两种屏都养不起一个 240px 高的坞:窄屏(九个胶囊折成三行,坞能长到 267px,
+ * 三分之一个屏幕)和矮屏(600 高的窗口,坞吃掉之后只剩 100px 给球)。
+ * 两边要的是同一件事,所以写在一个逗号并列的媒体查询里。
+ */
+@media (max-width: 760px), (max-height: 720px) {
+  /* 筛选压成一行横向滚动,右缘淡出提示还能往右划 */
+  .tl-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 10px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent);
+  }
+  .tl-filters::-webkit-scrollbar { display: none; }
+  /* 胶囊收紧一点,一屏能多露两个,滑动的必要性就没那么强 */
+  .tl-filters button { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; }
+
+  .tl-dock { padding: 10px 16px 12px; }
+  .tl-eras { margin-bottom: 8px; }
+  .tl-era .c { display: none; }
+  .tl-era-note { display: none; }
+}
+
 @media (max-width: 760px) {
   .tl-topbar { gap: 8px; }
   .tl-heading { flex: 1; margin-right: 0; padding: 9px 13px; }
   .tl-heading p { display: none; }
 
-  /* 竖屏里 2:1 的世界地图天然是一条横带:把它顶到上方,
-     中间的空当交给事件面板,而不是白白空着 */
-  .tl-stage { align-items: start; }
-  .tl-globe-wrap { width: min(86vmin, 380px); margin-top: 68px; }
+  /* 坞压扁之后竖屏也够居中了,不用再把球顶到顶上。
+     留白上下对半分,球看起来才是摆在纸中间的 */
+  .tl-globe-wrap {
+    width: min(90vmin, 400px, calc(100dvh - var(--top-h) - var(--dock-h) - 40px));
+  }
 
-  /* 面板贴着控制坞往上长:留白落在地球下方,球看起来是浮着的,
-     而不是被一块玻璃压住下缘 */
+  /* 窄屏塞不下"球 + 面板 + 坞"三层。面板改成贴着坞的抽屉:
+     默认收起,先让人看见球;拉开时最多吃掉三分之一视口,
+     盖住的是球的下缘,球心和标记密集的那一圈还露着 */
   .tl-panel {
     top: auto;
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 158px);
+    bottom: calc(var(--dock-h) + 10px);
     left: max(14px, env(safe-area-inset-left));
     right: max(14px, env(safe-area-inset-right));
     width: auto;
-    max-height: calc(100dvh - 470px);
+    max-height: min(38dvh, calc(100dvh - var(--top-h) - var(--dock-h) - 24px));
     transform: none;
   }
+
+  /* 抽屉拉开时球往上让一截。不让的话抽屉正好盖住球心,
+     而标记恰恰都聚在球心那一圈——等于把要看的东西挡了 */
+  .tl-globe-wrap { transition: transform 0.28s ease; }
+  body:has(.tl-panel:not(.collapsed)) .tl-globe-wrap { transform: translateY(-11dvh); }
 
   /* 返回键窄屏只留图标,把横向空间让给标题 */
   .tl-back { padding: 11px; }
@@ -439,6 +521,15 @@ body.tl-immersive {
   .tl-transport { gap: 12px; }
   .tl-year-badge span { font-size: 28px; }
   #tl-play { width: 44px; height: 44px; font-size: 16px; }
+}
+
+/* 面板宽 340 + 右边距 14 + 中间留 12。断点跟面板靠右的断点对齐:
+   面板一到右舷,球和坞就得让出这一列,否则中间那段宽度(768~1240)
+   球会按高度长满,横着叠到面板上 */
+@media (min-width: 761px) {
+  :root { --gutter-r: 366px; }
+  /* 小地球 132 + 两边留白:卷轴的左轴不该压在球身上 */
+  body[data-view="country"] { --gutter-l: 172px; }
 }
 
 /* 尊重减少动态偏好 */
@@ -557,3 +648,266 @@ body.tl-immersive {
 
 /* 大气层随缩放淡出(内联 style 控制),这里只给它一个过渡 */
 .tl-atmos { transition: opacity 0.25s; transform-origin: 50% 50%; }
+
+/* ============ 国家视图 ============
+ * 点进一个国家不是弹一张纸,是换一个视图:地球缩到左上角当定位器,
+ * 这个国家的平面地图像卷轴一样从左往右铺开,右边那一列(原来放
+ * 「今年发生了什么」的地方)换成这个国家的卷宗。
+ * 右列复用 .tl-panel —— 响应式、抽屉、断点全都不用再做一遍。
+ */
+
+/* 舞台里地球和卷轴同占一格,互相叠着,由 data-view 决定谁在台上 */
+.tl-stage > * { grid-area: 1 / 1; }
+
+.tl-scroll[hidden] { display: none !important; }
+.tl-scroll {
+  position: relative;
+  width: min(calc(100vw - var(--gutter-l) - var(--gutter-r) - 56px), 980px);
+  height: min(calc(100dvh - var(--top-h) - var(--dock-h) - 72px), 620px);
+  z-index: 1;
+}
+
+/* 纸:从左往右露出来。clip-path 和右轴用同一条时间曲线,
+   轴才像是"卷着纸往右走",而不是各走各的 */
+.tl-scroll-paper {
+  position: absolute;
+  inset: 0 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 22%),
+    linear-gradient(0deg, rgba(90, 68, 40, 0.10), transparent 18%),
+    var(--paper-1);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 10px 28px -14px var(--globe-cast, rgba(0, 0, 0, 0.3));
+  overflow: hidden;
+}
+
+/* 两根轴。左边那根不动,右边那根跟着纸的边缘走 */
+.tl-roller {
+  position: absolute;
+  top: -12px; bottom: -12px;
+  width: 18px;
+  border-radius: 9px;
+  background: linear-gradient(90deg, #6b5334, #a8875a 38%, #cdae7c 52%, #8a6d45 78%, #5d4729);
+  box-shadow: 0 6px 16px -6px rgba(60, 42, 20, 0.55);
+}
+/* 轴头的木纹截面 */
+.tl-roller::before, .tl-roller::after {
+  content: "";
+  position: absolute;
+  left: -2px; right: -2px;
+  height: 7px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4d3a22, #8a6d45 50%, #4d3a22);
+}
+.tl-roller::before { top: -3px; }
+.tl-roller::after { bottom: -3px; }
+.tl-roller.start { left: 0; }
+/* 轴现在只是纸的边框。铺开这件事交给球的形变去做了 ——
+   再让纸自己从左往右 clip 一遍,两段动画会打架 */
+.tl-roller.end { left: calc(100% - 18px); }
+
+/* 国名压在纸的左下角,像图廓外的题名 */
+.tl-scroll-label {
+  position: absolute;
+  left: 22px; bottom: 16px;
+  font-family: Georgia, "Songti SC", serif;
+  color: var(--ink);
+  pointer-events: none;
+}
+.tl-scroll-label span { font-size: 30px; letter-spacing: 5px; display: block; }
+.tl-scroll-label em {
+  font-style: normal; font-size: 12px; letter-spacing: 2.5px;
+  color: var(--muted); text-transform: uppercase;
+}
+
+.tl-cmap { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* 海就是纸本身 —— 老海图上海是留白的,画的是岸线。
+   原来铺一层半透明的海色把纸盖掉了,整张图灰成一片 */
+.tl-cmap .sea { fill: var(--globe-sea-1); opacity: 0.16; }
+/* 邻国:陆地和海之间的一档中间色,细墨线勾边。
+   写死成 --paper-2 在深色下比海还暗,加拿大和墨西哥会变成两片黑洞;
+   从两头调出来才能七种纸都成立。不用透明度压 ——
+   压出来的是"没画完",不是"退到背景里" */
+.tl-cmap .nb {
+  fill: var(--globe-land);
+  fill: color-mix(in srgb, var(--globe-land) 52%, var(--globe-sea-2));
+  stroke: var(--ink-faint);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+/* 主角:亮出来,岸线加粗成一道刻线 */
+#tl-cmap-land {
+  fill: var(--globe-land);
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+
+/* 国家地图上的标记:和球面上同一套墨绘字形 */
+.tl-cmark { cursor: pointer; }
+/* 和球面上同一套约定:符号是墨线画的,不填色。
+   non-scaling-stroke 让 scale(2.4) 只放大形状,不把线也拉粗 */
+.tl-cmark .g {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.tl-cmark.st-now .g { stroke: var(--accent); stroke-width: 1.7; }
+.tl-cmark .ring { fill: none; stroke: var(--accent); stroke-width: 1.2; opacity: 0; }
+.tl-cmark .hit { fill: transparent; }
+/* 词条三态也跟着:实心=点亮,细线=在读,虚线=想读 */
+.tl-cmark.k-在读 .g { stroke-width: 0.75; }
+.tl-cmark.k-想读 { opacity: 0.5; }
+.tl-cmark.k-想读 .g { stroke-width: 0.7; stroke-dasharray: 1.4 1.4; }
+.tl-cmark text {
+  font-size: 12px; fill: var(--ink); letter-spacing: 1px;
+  font-family: Georgia, "Songti SC", serif;
+  paint-order: stroke fill;
+  stroke: var(--paper-1);
+  stroke-width: 3px;                   /* 年份压在岸线上也要读得出来 */
+}
+/* 还没走到的年份是淡的,当年的那个亮起来 */
+.tl-cmark.st-future { opacity: 0.22; }
+.tl-cmark.st-past { opacity: 0.62; }
+.tl-cmark.st-now .ring { opacity: 0.85; animation: tl-ping 1.8s ease-out infinite; }
+
+/* ---- 视图切换 ---- */
+body[data-view="country"] .tl-globe-wrap {
+  position: fixed;
+  top: calc(var(--top-h) + 16px);
+  left: max(18px, env(safe-area-inset-left));
+  width: 132px;
+  z-index: 25;
+  cursor: pointer;
+}
+body[data-view="country"] .tl-globe-wrap #world-map { cursor: pointer; }
+
+.tl-back-globe[hidden] { display: none !important; }
+.tl-back-globe {
+  position: fixed;
+  top: calc(var(--top-h) + 152px);
+  left: max(18px, env(safe-area-inset-left));
+  width: 132px;
+  z-index: 25;
+  padding: 5px 0;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.tl-back-globe:hover { color: var(--accent); }
+
+/* 标题二选一 */
+.tl-title-country { display: none; }
+body[data-view="country"] .tl-title-year { display: none; }
+body[data-view="country"] .tl-title-country { display: flex; align-items: center; gap: 10px; }
+.tl-title-country .tl-seal.sm { width: 30px; height: 30px; flex-shrink: 0; }
+.tl-title-country em {
+  display: block; font-style: normal; font-weight: 400;
+  font-size: 11px; letter-spacing: 1.5px; color: var(--muted);
+}
+#tl-dossier-body { display: none; }
+body[data-view="country"] #tl-now-list { display: none; }
+body[data-view="country"] #tl-dossier-body { display: block; }
+
+/* 窄屏的国家视图。必须写在上面那组 body[data-view] 之后:
+   同权重的规则后写的赢,放进前面的 @media 会被直接盖掉。 */
+@media (max-width: 760px) {
+  /* 让不出左舷那一列,小球只能浮在地图角上。缩小一号、加一圈投影,
+     读成"贴上去的定位徽章",而不是穿帮 */
+  body[data-view="country"] .tl-globe-wrap {
+    width: 88px;
+    top: calc(var(--top-h) + 10px);
+    left: max(12px, env(safe-area-inset-left));
+    filter: drop-shadow(0 3px 10px var(--globe-cast, rgba(0, 0, 0, 0.35)));
+  }
+  body[data-view="country"] .tl-back-globe {
+    top: calc(var(--top-h) + 102px);
+    left: max(12px, env(safe-area-inset-left));
+    width: 88px;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  /* 卷轴在竖屏里不值当留两根轴的余量,纸铺满 */
+  .tl-scroll { width: calc(100vw - 28px); }
+  .tl-scroll-label { left: 14px; bottom: 12px; }
+  .tl-scroll-label span { font-size: 22px; letter-spacing: 3px; }
+}
+
+/* ============ 球摊平 ============
+ * 从球切到平面地图不是"切",是同一批顶点从球面位置插值到纸上的位置。
+ * 那一秒钟由这块画布接管:真球和纸上的东西都让位,
+ * 因为画到最后一帧时它和 SVG 那张图逐像素是同一张,交接才看不出缝。
+ */
+.tl-morph[hidden] { display: none !important; }
+.tl-morph {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: none;
+}
+body.morphing .tl-globe-wrap,
+body.morphing .tl-scroll-paper,
+body.morphing .tl-roller { opacity: 0; }
+/* 交接:先在画布**底下**把 SVG 那张图亮出来,再撤画布。
+   反过来做的话有 18 帧是空纸(实测过)——画布已经撤了,SVG 还在淡入。
+   地图本身不淡:它和画布最后一帧逐像素相同,淡入只会露馅。
+   纸和轴要淡,是因为纸上那两道高光渐变画布没画。 */
+.tl-scroll-paper, .tl-roller { transition: opacity 0.24s ease; }
+/* 角上那颗球从小长到位,不是硬出现 */
+body[data-view="country"] .tl-globe-wrap { transition: opacity 0.3s ease, transform 0.42s cubic-bezier(.22,.9,.3,1); }
+body.globe-in .tl-globe-wrap { opacity: 0; transform: scale(0.55); }
+
+/* ============ 缩放控件 ============
+ * 滚轮和双指捏合都能缩放,但两者都是"藏着的"。
+ * 摆一组看得见的按钮在左舷,顺便把当前倍率写出来。
+ */
+.tl-zoom {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: calc(var(--dock-h) + 26px);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: opacity 0.25s ease;
+}
+.tl-zoom button {
+  width: 34px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tl-zoom button:hover { background: var(--accent); color: #fff; }
+.tl-zoom button:disabled { opacity: 0.3; cursor: default; background: none; color: var(--ink); }
+.tl-zoom span {
+  font-size: 10.5px;
+  text-align: center;
+  padding: 3px 0;
+  color: var(--muted);
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  border-block: 1px solid var(--rule);
+}
+/* 国家视图里球是角上的定位器,缩放它没有意义 */
+body[data-view="country"] .tl-zoom { opacity: 0; pointer-events: none; }

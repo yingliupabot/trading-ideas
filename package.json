@@ -5,7 +5,10 @@
   "description": "交易想法、Pine Script 研读和读书笔记 —— 静态站的浏览器工具链",
   "scripts": {
     "shot": "node scripts/shot.js",
-    "index": "node scripts/build-index.js"
+    "index": "node scripts/build-index.js",
+    "layout": "node scripts/check-layout.js",
+    "country": "node scripts/check-country.js",
+    "zoom": "node scripts/check-zoom.js"
   },
   "devDependencies": {
     "playwright": "^1.56.0"

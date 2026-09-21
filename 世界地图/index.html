@@ -29,7 +29,35 @@
     </svg>
     <div class="tl-popup" id="tl-popup" hidden></div>
   </div>
+
+  <!-- 卷轴:点进国家时从左往右铺开的那张平面地图 -->
+  <div class="tl-scroll" id="tl-scroll" hidden aria-hidden="true">
+    <div class="tl-scroll-paper" id="tl-scroll-paper">
+      <svg class="tl-cmap" id="tl-cmap" viewBox="0 0 800 520" preserveAspectRatio="xMidYMid meet">
+        <g id="tl-cmap-sea"></g>
+        <g id="tl-cmap-neighbors"></g>
+        <path id="tl-cmap-land"></path>
+        <g id="tl-cmap-marks"></g>
+      </svg>
+      <div class="tl-scroll-label"><span id="tl-scroll-name"></span><em id="tl-scroll-sub"></em></div>
+    </div>
+    <div class="tl-roller start" aria-hidden="true"></div>
+    <div class="tl-roller end" id="tl-roller-end" aria-hidden="true"></div>
+  </div>
 </div>
+
+<!-- 缩放:滚轮和捏合之外,还得有个看得见的入口 -->
+<div class="tl-zoom" id="tl-zoom" role="group" aria-label="缩放地球">
+  <button id="tl-zoom-in" aria-label="放大" title="放大">+</button>
+  <span id="tl-zoom-read" aria-live="polite">1.0×</span>
+  <button id="tl-zoom-out" aria-label="缩小" title="缩小">−</button>
+</div>
+
+<!-- 摊平用的画布:只在球变成纸的那一秒露面 -->
+<canvas class="tl-morph" id="tl-morph" hidden aria-hidden="true"></canvas>
+
+<!-- 回到地球:国家视图里小球下面那行字 -->
+<button class="tl-back-globe" id="tl-back-globe" hidden>回到地球</button>
 
 <!-- 顶栏:浮在地图上的玻璃条 -->
 <header class="tl-topbar">
@@ -39,7 +67,7 @@
   </a>
   <div class="tl-heading">
     <h1>🗺 世界历史时间轴</h1>
-    <p>拖动旋转 · 滚轮缩放 · 拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+    <p>拖动旋转 · 滚轮缩放 · 点国家看卷宗</p>
   </div>
   <div class="tl-topbar-actions">
     <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -55,25 +83,32 @@
 <!-- 右侧事件面板:分类名以文字呈现,兜住低对比度色的可读性 -->
 <aside class="tl-panel" id="tl-panel">
   <button class="tl-panel-toggle" id="tl-panel-toggle" aria-expanded="true" aria-controls="tl-panel-body" title="收起/展开">
-    <h3><span id="tl-now-year">1720</span> 年发生了什么</h3>
+    <h3 class="tl-title-year"><span id="tl-now-year">1720</span> 年发生了什么</h3>
+    <h3 class="tl-title-country">
+      <svg class="tl-seal sm" viewBox="0 0 60 60" aria-hidden="true"><path id="tl-seal-path"/></svg>
+      <span><span id="tl-country-name"></span><em id="tl-country-sub"></em></span>
+    </h3>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
   <div class="tl-panel-body" id="tl-panel-body">
     <div id="tl-now-list"></div>
+    <div id="tl-dossier-body"></div>
   </div>
 </aside>
 
 <!-- 词条管理:读和写在同一个页面上,不另开后台 -->
 <div class="tl-manage" id="tl-manage" hidden>
   <div class="tl-manage-sheet">
-    <button class="tl-dossier-close" id="tl-manage-close" aria-label="关闭">×</button>
+    <button class="tl-sheet-close" id="tl-manage-close" aria-label="关闭">×</button>
     <h2>词条</h2>
     <p class="sub">点状态可以循环切换：点亮 → 在读 → 想读。<br>
       改完导出，粘回 <code>词条/&lt;id&gt;/meta.json</code>，再跑 <code>npm run index</code>。</p>
-    <table class="tl-tbl"><thead><tr>
-      <th style="width:70px">年份</th><th>标题</th><th style="width:78px">时代</th>
-      <th style="width:62px">分类</th><th style="width:78px">状态</th>
-    </tr></thead><tbody id="tl-tbl-body"></tbody></table>
+    <div class="tl-tbl-wrap">
+      <table class="tl-tbl"><thead><tr>
+        <th style="width:70px">年份</th><th>标题</th><th style="width:78px">时代</th>
+        <th style="width:62px">分类</th><th style="width:78px">状态</th>
+      </tr></thead><tbody id="tl-tbl-body"></tbody></table>
+    </div>
 
     <div class="tl-new" id="tl-new">
       <div class="row">
@@ -107,21 +142,6 @@
     </div>
     <pre class="tl-export" id="tl-export-out" hidden></pre>
     <p class="tl-manage-hint" id="tl-manage-hint"></p>
-  </div>
-</div>
-
-<!-- 国家卷宗:点进一个国家时从顶边展开的牛皮纸 -->
-<div class="tl-dossier" id="tl-dossier" hidden>
-  <div class="tl-dossier-sheet" id="tl-dossier-sheet">
-    <button class="tl-dossier-close" id="tl-dossier-close" aria-label="收起">×</button>
-    <header class="tl-dossier-head">
-      <svg class="tl-seal" viewBox="0 0 60 60" aria-hidden="true"><path id="tl-seal-path"/></svg>
-      <div class="tl-dossier-title">
-        <h2 id="tl-dossier-name"></h2>
-        <p id="tl-dossier-sub"></p>
-      </div>
-    </header>
-    <div class="tl-dossier-body" id="tl-dossier-body"></div>
   </div>
 </div>
 
@@ -164,6 +184,12 @@
   var btn = document.getElementById("tl-panel-toggle");
   var panel = document.getElementById("tl-panel");
   if (!btn || !panel) return;
+  /* 窄屏默认收起:一屏放不下球 + 面板 + 控制坞三层,
+     先让人看见球,要看清单再拉开 */
+  if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+    panel.classList.add("collapsed");
+    btn.setAttribute("aria-expanded", "false");
+  }
   btn.addEventListener("click", function () {
     var collapsed = panel.classList.toggle("collapsed");
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
