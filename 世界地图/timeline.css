@@ -1,24 +1,34 @@
 /* 世界历史时间轴 · 全屏沉浸式样式 */
 
 :root {
-  --map-ocean-1: #cfe1f5;
-  --map-ocean-2: #ecdcef;
-  --map-land: #f7cfe0;
-  --map-land-hover: #f3b9d1;
-  --map-stroke: rgba(255, 255, 255, 0.85);
-  --stage-glow: rgba(255, 255, 255, 0.55);
-  --stage-vignette: rgba(120, 130, 170, 0.18);
+  /* 浅色:白昼的地球 */
+  --space-1: #e8eef9;
+  --space-2: #f3e9f4;
+  --globe-sea-1: #a9c9ee;
+  --globe-sea-2: #7ba6d9;
+  --globe-sea-3: #5b86bd;
+  --globe-land: #f7d3e2;
+  --globe-land-hover: #f6bed6;
+  --globe-stroke: rgba(255, 255, 255, 0.9);
+  --atmos: rgba(88, 166, 255, 0.35);
+  --stage-glow: rgba(255, 255, 255, 0.5);
+  --stage-vignette: rgba(120, 130, 170, 0.16);
   --glass: rgba(255, 255, 255, 0.72);
   --glass-edge: rgba(255, 255, 255, 0.85);
 }
 :root[data-theme="dark"] {
-  --map-ocean-1: #0f1626;
-  --map-ocean-2: #1e192c;
-  --map-land: #414b66;
-  --map-land-hover: #525e7d;
-  --map-stroke: rgba(14, 19, 30, 0.7);
-  --stage-glow: rgba(88, 166, 255, 0.10);
-  --stage-vignette: rgba(0, 0, 0, 0.42);
+  /* 深色:深空里的地球 */
+  --space-1: #06070f;
+  --space-2: #0b0a18;
+  --globe-sea-1: #26355e;
+  --globe-sea-2: #151f3d;
+  --globe-sea-3: #0a0f22;
+  --globe-land: #5a6796;
+  --globe-land-hover: #6f7cb0;
+  --globe-stroke: rgba(91, 106, 156, 0.85);
+  --atmos: rgba(88, 166, 255, 0.42);
+  --stage-glow: rgba(88, 166, 255, 0.07);
+  --stage-vignette: rgba(0, 0, 0, 0.55);
   --glass: rgba(22, 27, 34, 0.72);
   --glass-edge: rgba(48, 54, 61, 0.9);
 }
@@ -37,8 +47,7 @@ body.tl-immersive {
   inset: 0;
   display: grid;
   place-items: center;
-  /* 海洋渐变铺到视口边缘,和地图容器同色,接缝不可见 */
-  background: linear-gradient(135deg, var(--map-ocean-1), var(--map-ocean-2));
+  background: linear-gradient(150deg, var(--space-1), var(--space-2));
 }
 /* 中心提亮 + 四周压暗:让视线落在地图上,留白成为氛围 */
 .tl-stage::after {
@@ -50,15 +59,40 @@ body.tl-immersive {
     radial-gradient(58% 52% at 50% 46%, var(--stage-glow), transparent 70%),
     radial-gradient(120% 100% at 50% 50%, transparent 52%, var(--stage-vignette));
 }
-.tl-map-wrap { z-index: 1; }
+.tl-globe-wrap { z-index: 1; }
 
-/* 严格 2:1。timeline.js 的弹窗按容器百分比定位,拉伸会让弹窗错位 */
-.tl-map-wrap {
+/* 正方形。弹窗按容器百分比定位(viewBox -120..120 → 0..100%),不能被拉伸 */
+.tl-globe-wrap {
   position: relative;
-  width: min(100vw, 200dvh);
-  aspect-ratio: 2 / 1;
+  width: min(88vmin, 720px);
+  aspect-ratio: 1;
 }
-#world-map { display: block; width: 100%; height: 100%; }
+#world-map { display: block; width: 100%; height: 100%; overflow: visible; cursor: grab; touch-action: none; }
+#world-map:active { cursor: grabbing; }
+
+/* 大气层:球体外缘的一圈辉光,只有球才有的东西 */
+.tl-atmos {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%,
+    transparent 40.2%, var(--atmos) 42%, rgba(139, 92, 246, 0.14) 44.5%, transparent 48%);
+  filter: blur(4px);
+}
+
+.globe-ocean { fill: url(#tlOcean); }
+.globe-land {
+  fill: var(--globe-land);
+  stroke: var(--globe-stroke);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+  transition: fill 0.2s;
+}
+.globe-land:hover { fill: var(--globe-land-hover); }
+
+/* 冲击波:沿球面扩散的圆环 */
+.tl-wave { fill: none; stroke: currentColor; stroke-width: 0.9; }
 
 /* 玻璃面板通用 */
 .tl-glass {
@@ -249,37 +283,23 @@ body.tl-immersive {
 .tl-cat-文化 { color: #d97706 !important; background: rgba(217, 119, 6, 0.12) !important; }
 
 /* ============ 地图与标记 ============ */
-.tl-country {
-  fill: var(--map-land);
-  stroke: var(--map-stroke);
-  stroke-width: 0.9;
-  transition: fill 0.2s;
-}
-.tl-country:hover { fill: var(--map-land-hover); }
-
 .tl-marker { cursor: pointer; }
 /* 透明但可命中:SVG 里 fill:none 的图形内部不接受点击,必须显式给 fill */
 .tl-marker .tl-hit { fill: transparent; }
-.tl-marker .tl-dot { stroke: #fff; stroke-width: 1.6; filter: drop-shadow(0 0 5px currentColor); }
-.tl-marker .tl-halo { fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0; }
-.tl-marker .tl-spark { display: none; font-size: 15px; text-anchor: middle; fill: currentColor; }
-.tl-marker.st-past { opacity: 0.55; }
-.tl-marker.st-past .tl-dot { r: 4; }
-.tl-marker.st-now .tl-halo { opacity: 0.85; animation: tl-ping 1.6s ease-out infinite; }
-.tl-marker.st-now .tl-spark { display: block; animation: tl-twinkle 1.6s ease-in-out infinite; }
+.tl-marker .tl-dot { fill: currentColor; stroke: #fff; stroke-width: 0.5; }
+.tl-marker .tl-halo { fill: none; stroke: currentColor; stroke-width: 0.5; opacity: 0; }
+/* 往事沉成余烬:越往后拖,地球上攒下的光点越多 */
+.tl-marker.st-past { opacity: 0.5; }
+.tl-marker.st-now .tl-halo { opacity: 0.9; animation: tl-ping 1.8s ease-out infinite; }
 .cat-经济 { color: #e0568b; }
 .cat-政治 { color: #8b5cf6; }
 .cat-战争 { color: #ef6c4d; }
 .cat-科技 { color: #0ea5e9; }
 .cat-文化 { color: #d97706; }
-.cat-经济 .tl-dot { fill: #e0568b; }
-.cat-政治 .tl-dot { fill: #8b5cf6; }
-.cat-战争 .tl-dot { fill: #ef6c4d; }
-.cat-科技 .tl-dot { fill: #0ea5e9; }
-.cat-文化 .tl-dot { fill: #d97706; }
+
 @keyframes tl-ping {
-  0% { r: 8; opacity: 0.9; }
-  100% { r: 26; opacity: 0; }
+  0% { r: 3; opacity: 0.9; }
+  100% { r: 11; opacity: 0; }
 }
 @keyframes tl-twinkle {
   0%, 100% { opacity: 0.25; transform: translateY(0); }
@@ -385,16 +405,17 @@ body.tl-immersive {
   /* 竖屏里 2:1 的世界地图天然是一条横带:把它顶到上方,
      中间的空当交给事件面板,而不是白白空着 */
   .tl-stage { align-items: start; }
-  .tl-map-wrap { width: min(122vw, 200dvh); margin-top: 92px; }
+  .tl-globe-wrap { width: min(86vmin, 380px); margin-top: 68px; }
 
-  /* 贴着内容走,不硬撑到底 —— 事件少的年份不会留一块空玻璃 */
+  /* 面板贴着控制坞往上长:留白落在地球下方,球看起来是浮着的,
+     而不是被一块玻璃压住下缘 */
   .tl-panel {
-    top: 340px;
-    bottom: auto;
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 158px);
     left: max(14px, env(safe-area-inset-left));
     right: max(14px, env(safe-area-inset-right));
     width: auto;
-    max-height: calc(100dvh - 340px - max(16px, env(safe-area-inset-bottom)) - 172px);
+    max-height: calc(100dvh - 470px);
     transform: none;
   }
 

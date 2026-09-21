@@ -11,12 +11,29 @@
 </head>
 <body class="tl-immersive">
 
-<!-- 地图舞台:铺满视口,海洋渐变延伸到边缘 -->
+<!-- 地球舞台:深空铺满视口,球体居中 -->
 <div class="tl-stage">
-  <div class="tl-map-wrap">
-    <svg id="world-map" viewBox="0 0 1000 500" role="img" aria-label="世界地图,标记随年份出现">
+  <div class="tl-globe-wrap">
+    <div class="tl-atmos" aria-hidden="true"></div>
+    <svg id="world-map" viewBox="-120 -120 240 240" role="img"
+         aria-label="可拖动旋转的地球，历史事件随年份在球面上点亮">
+      <defs>
+        <radialGradient id="tlOcean" cx="34%" cy="28%">
+          <stop offset="0%" stop-color="var(--globe-sea-1)"/>
+          <stop offset="68%" stop-color="var(--globe-sea-2)"/>
+          <stop offset="100%" stop-color="var(--globe-sea-3)"/>
+        </radialGradient>
+        <!-- 双层高斯模糊再合并:核心锐利,外圈辉光 -->
+        <filter id="tlBloom" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="1.4" result="b1"/>
+          <feGaussianBlur stdDeviation="4" result="b2"/>
+          <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle class="globe-ocean" r="100"/>
       <g id="tl-land"></g>
-      <g id="tl-markers"></g>
+      <g id="tl-waves" filter="url(#tlBloom)"></g>
+      <g id="tl-markers" filter="url(#tlBloom)"></g>
     </svg>
     <div class="tl-popup" id="tl-popup" hidden></div>
   </div>
@@ -30,7 +47,7 @@
   </a>
   <div class="tl-heading">
     <h1>🗺 世界历史时间轴</h1>
-    <p>经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+    <p>拖动地球，拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
   </div>
   <div class="tl-topbar-actions">
     <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -77,6 +94,7 @@
 
 <script src="map.js"></script>
 <script src="events.js"></script>
+<script src="globe.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>
 <script>
