@@ -247,6 +247,100 @@ var Globe = (function () {
   function arcPath(a, b, opts) { return arcPathFrom(prepArc(a, b), opts); }
   function arcPointAt(a, b, t, lift) { return arcPointFrom(prepArc(a, b), t, lift); }
 
+  /* ---------- 反投影与点选 ----------
+   * 陆地画在 canvas 上,没有 DOM 可以挂点击事件。改成把屏幕坐标反解回经纬度,
+   * 再对每个国家的多边形做射线法判定——点击时才算一次,不进每帧开销。
+   */
+  function unproject(X, Y) {
+    var Rz = R * zoom;
+    var xu = X / Rz, yu = -Y / Rz;               /* 屏幕 y 向下,几何里向上 */
+    var rho = Math.sqrt(xu * xu + yu * yu);
+    if (rho > 1) return null;                    /* 点在球外 */
+    if (rho < 1e-9) return [rot, tilt];          /* 正中心:视图中心纬度就等于 tilt */
+    var c = Math.asin(rho), sc = Math.sin(c), cc = Math.cos(c);
+    var p0 = tilt * D2R;
+    var lat = Math.asin(cc * Math.sin(p0) + yu * sc * Math.cos(p0) / rho);
+    var lng = rot * D2R + Math.atan2(xu * sc, rho * cc * Math.cos(p0) - yu * sc * Math.sin(p0));
+    lng = lng * R2D;
+    while (lng > 180) lng -= 360;
+    while (lng < -180) lng += 360;
+    return [lng, lat * R2D];
+  }
+
+  /* 射线法:数一条向右的射线穿过多边形边界几次 */
+  function inRing(ring, lng, lat) {
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var yi = Math.asin(ring[i].sinLat) * R2D, xi = ring[i].lng * R2D;
+      var yj = Math.asin(ring[j].sinLat) * R2D, xj = ring[j].lng * R2D;
+      if (Math.abs(xi - xj) > 180) continue;     /* 跨越日界线的边,跳过 */
+      if ((yi > lat) !== (yj > lat) &&
+          lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function countryAt(lng, lat) {
+    for (var i = 0; i < countries.length; i++) {
+      var rings = countries[i].rings;
+      for (var j = 0; j < rings.length; j++) {
+        if (inRing(rings[j], lng, lat)) return countries[i].n;
+      }
+    }
+    return null;
+  }
+  /* 屏幕坐标(viewBox 单位) → 国家名 */
+  function pick(X, Y) {
+    var ll = unproject(X, Y);
+    return ll ? { lng: ll[0], lat: ll[1], country: countryAt(ll[0], ll[1]) } : null;
+  }
+
+  /* 国家的顶点平均位置——用来把地球转过去。不是严格的形心,但够用 */
+  function aimOf(name) {
+    for (var i = 0; i < countries.length; i++) {
+      if (countries[i].n !== name) continue;
+      var best = null, bestN = 0;
+      countries[i].rings.forEach(function (ring) {
+        if (ring.length <= bestN) return;        /* 取顶点最多的那个环,避开小离岛 */
+        bestN = ring.length; best = ring;
+      });
+      if (!best) return null;
+      var sx = 0, sy = 0, sz = 0;
+      best.forEach(function (v) {
+        sx += v.cosLat * Math.cos(v.lng); sy += v.cosLat * Math.sin(v.lng); sz += v.sinLat;
+      });
+      var m = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1;
+      return [Math.atan2(sy / m, sx / m) * R2D, Math.asin(sz / m) * R2D];
+    }
+    return null;
+  }
+  function countryNames() { return countries.map(function (c) { return c.n; }); }
+
+  /* 单个国家的轮廓,画成小印章用:投影到一个 size×size 的方框里 */
+  function outlinePath(name, size) {
+    for (var i = 0; i < countries.length; i++) {
+      if (countries[i].n !== name) continue;
+      var pts = [];
+      countries[i].rings.forEach(function (ring) {
+        pts.push(ring.map(function (v) { return [v.lng * R2D, Math.asin(v.sinLat) * R2D]; }));
+      });
+      var all = [].concat.apply([], pts);
+      var xs = all.map(function (p) { return p[0]; }), ys = all.map(function (p) { return p[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+      var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+      /* 按纬度做一次余弦校正,否则高纬国家会被横向拉扁 */
+      var kx = Math.cos((y0 + y1) / 2 * D2R);
+      var w = (x1 - x0) * kx, h = y1 - y0;
+      var sc = (size * 0.86) / Math.max(w, h), ox = (size - w * sc) / 2, oy = (size - h * sc) / 2;
+      return pts.map(function (ring) {
+        return ring.map(function (p, k) {
+          var X = ox + (p[0] - x0) * kx * sc, Y = oy + (y1 - p[1]) * sc;
+          return (k ? "L" : "M") + X.toFixed(1) + "," + Y.toFixed(1);
+        }).join("") + "Z";
+      }).join("");
+    }
+    return "";
+  }
+
   /* ---------- 旋转 ---------- */
   var spinTarget = null, autoSpin = 0.035, idleUntil = 0, vel = 0, dragging = false;
 
@@ -320,6 +414,8 @@ var Globe = (function () {
     arcPath: arcPath, arcPointAt: arcPointAt, lerpPoint: lerpPoint, angleBetween: angleBetween,
     prepArc: prepArc, arcPathFrom: arcPathFrom, arcPointFrom: arcPointFrom,
     rotateTo: rotateTo, step: step, attachDrag: attachDrag,
+    unproject: unproject, countryAt: countryAt, pick: pick,
+    aimOf: aimOf, countryNames: countryNames, outlinePath: outlinePath,
     get rotation() { return rot; }, set rotation(v) { rot = v; },
     get tilt() { return tilt; }, setTilt: setTilt,
     get zoom() { return zoom; }, setZoom: setZoom,

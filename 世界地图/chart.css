@@ -144,3 +144,117 @@ body.tl-immersive,
   font-size: 13px;
   letter-spacing: 0.5px;
 }
+
+/* ============ 国家卷宗:从顶边展开的牛皮纸 ============ */
+.tl-dossier {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 88px 16px 24px;
+  background: rgba(60, 45, 25, 0.28);
+  overflow-y: auto;
+}
+:root[data-theme="dark"] .tl-dossier { background: rgba(0, 0, 0, 0.5); }
+
+.tl-dossier-sheet {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 26px 30px 30px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  /* 从顶边折下来。perspective 给在自己身上,父层是 grid 不方便设 */
+  transform: perspective(1400px) rotateX(-88deg);
+  transform-origin: top center;
+  opacity: 0;
+  transition: transform 0.42s cubic-bezier(.22,.9,.3,1), opacity 0.22s ease-out;
+}
+.tl-dossier-sheet.open { transform: perspective(1400px) rotateX(0deg); opacity: 1; }
+
+/* 纸的折痕:横过中间的一道浅印,和边上微微的阴影 */
+.tl-dossier-sheet::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 46%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-faint) 12%, var(--ink-faint) 88%, transparent);
+  pointer-events: none;
+}
+.tl-dossier-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--ink-faint);
+  pointer-events: none;
+}
+
+.tl-dossier-close {
+  position: absolute;
+  top: 10px; right: 12px;
+  width: 30px; height: 30px;
+  border: 1px solid var(--rule);
+  background: none;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.tl-dossier-close:hover { color: var(--accent); border-color: var(--accent); }
+
+.tl-dossier-head { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+/* 封缄印章:54 个顶点当大地图不能看,缩到 60px 正好,还带点木刻的粗粝 */
+.tl-seal { width: 62px; height: 62px; flex-shrink: 0; }
+.tl-seal path { fill: var(--globe-land); stroke: var(--ink); stroke-width: 1.1; stroke-linejoin: round; }
+.tl-dossier-title h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 3px;
+  font-family: Georgia, "Songti SC", serif;
+}
+.tl-dossier-title p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); letter-spacing: 1px; }
+
+.tl-dossier-body { margin-top: 18px; }
+.tl-dossier-body h3 {
+  margin: 22px 0 10px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 5px;
+}
+.tl-dossier-body h3:first-child { margin-top: 0; }
+
+.tl-doss-row { padding: 9px 0; border-bottom: 1px dotted var(--ink-faint); }
+.tl-doss-row:last-child { border-bottom: none; }
+.tl-doss-year {
+  display: inline-block;
+  min-width: 46px;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+.tl-doss-row strong { font-size: 14.5px; margin-right: 8px; }
+.tl-doss-row p { margin: 5px 0 0 46px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+.tl-doss-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 2;
+  padding: 26px 0 12px;
+}
+.tl-doss-empty span { color: var(--ink-faint); font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-dossier-sheet { transition: opacity 0.2s; transform: none !important; }
+}
+@media (max-width: 760px) {
+  .tl-dossier { padding: 74px 12px 20px; }
+  .tl-dossier-sheet { padding: 22px 18px 24px; }
+  .tl-dossier-title h2 { font-size: 22px; }
+}

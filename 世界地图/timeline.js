@@ -25,6 +25,8 @@
   var linkToggle = document.getElementById("tl-link-toggle");
   var atmos = document.querySelector(".tl-atmos");
   var rhumbLayer = document.getElementById("tl-rhumbs");
+  var dossier = document.getElementById("tl-dossier");
+  var dossierSheet = document.getElementById("tl-dossier-sheet");
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
@@ -112,6 +114,8 @@
     return { ev: ev, g: g, dot: dot, halo: halo, glow: glow };
   });
   svg.addEventListener("click", function () { openIdx = null; popup.hidden = true; });
+  /* 注意:开卷宗的点击监听在下面单独注册,两者都会收到事件——
+     先关弹窗再开卷宗,顺序无所谓,互不干扰。 */
 
   /* ---------- 弹窗 ---------- */
   function fillPopup(ev) {
@@ -211,6 +215,109 @@
       el.setAttribute("r", c.r.toFixed(2)); el.setAttribute("opacity", c.o.toFixed(2));
     });
   }
+
+  /* ---------- 国家卷宗 ----------
+   * 不是"放大这个国家的地图"——数据里每个国家只有一个多边形,没有城市、
+   * 没有行政区,放大之后没有新东西可看。展开的是它的档案。
+   * 那个 54 顶点的轮廓当大地图不能看,缩成 60px 的封缄印章正好。
+   */
+  var cityCountry = {};
+  Object.keys(FLOW_PLACES).forEach(function (k) {
+    var p = FLOW_PLACES[k];
+    cityCountry[k] = Globe.countryAt(p.lng, p.lat) || CITY_COUNTRY_FALLBACK[k] || null;
+  });
+
+  function gather(en) {
+    var cities = Object.keys(FLOW_PLACES).filter(function (k) { return cityCountry[k] === en; });
+    var evs = TIMELINE_EVENTS.filter(function (e) {
+      return (COUNTRY_EN[e.country] || e.country) === en;
+    });
+    var years = evs.map(function (e) { return e.year; });
+    return {
+      en: en,
+      cn: COUNTRY_CN[en] || en,
+      events: evs.sort(function (a, b) { return a.year - b.year; }),
+      out: MONEY_FLOWS.filter(function (f) { return cities.indexOf(f.from) >= 0; }),
+      into: MONEY_FLOWS.filter(function (f) { return cities.indexOf(f.to) >= 0; }),
+      links: CAUSAL_LINKS.filter(function (l) {
+        return years.indexOf(l.from) >= 0 || years.indexOf(l.to) >= 0;
+      }),
+      cities: cities.map(function (k) { return FLOW_PLACES[k].name; })
+    };
+  }
+
+  function openDossier(en) {
+    var d = gather(en);
+    document.getElementById("tl-seal-path").setAttribute("d", Globe.outlinePath(en, 60));
+    document.getElementById("tl-dossier-name").textContent = d.cn;
+    document.getElementById("tl-dossier-sub").textContent =
+      d.cn === d.en ? "" : d.en;
+
+    var html = "";
+    if (d.events.length) {
+      html += '<h3>这里发生过什么</h3>';
+      html += d.events.map(function (e) {
+        return '<div class="tl-doss-row"><span class="tl-doss-year">' + e.year + '</span>' +
+          '<span class="tag-pill tl-cat-' + e.cat + '">' + e.cat + '</span>' +
+          '<strong>' + e.title + '</strong><p>' + e.summary + '</p></div>';
+      }).join("");
+    }
+    if (d.out.length || d.into.length) {
+      html += '<h3>钱从这里去了哪儿，又从哪儿来</h3>';
+      html += d.out.map(function (f) {
+        return '<div class="tl-doss-row flow"><span class="tl-doss-year">' + f.year + '</span>' +
+          '<strong>→ ' + FLOW_PLACES[f.to].name + '</strong>' +
+          '<span class="tl-flow-kind">' + f.kind + '</span><p>' + f.note + '</p></div>';
+      }).join("");
+      html += d.into.map(function (f) {
+        return '<div class="tl-doss-row flow"><span class="tl-doss-year">' + f.year + '</span>' +
+          '<strong>← ' + FLOW_PLACES[f.from].name + '</strong>' +
+          '<span class="tl-flow-kind">' + f.kind + '</span><p>' + f.note + '</p></div>';
+      }).join("");
+    }
+    if (d.links.length) {
+      html += '<h3>它牵在哪条因果链上</h3>';
+      html += d.links.map(function (l) {
+        return '<div class="tl-doss-row link"><span class="tl-link-strength">' + l.strength + '</span>' +
+          '<strong>' + l.from + ' → ' + l.to + '</strong><p>' + l.note + '</p></div>';
+      }).join("");
+    }
+    if (!html) {
+      /* 176 个国家里只有约 10 个有内容。空状态不该是一张白纸 */
+      html = '<p class="tl-doss-empty">这一页还是空白的。<br>' +
+             '《逃不开的经济周期》还没写到这里——也可能是它从没被卷进来过。<br>' +
+             '<span>往 events.js 里加一行，这张纸就有字了。</span></p>';
+    }
+    document.getElementById("tl-dossier-body").innerHTML = html;
+
+    dossier.hidden = false;
+    /* 强制回流一次,否则加 class 和去 hidden 在同一帧,动画不触发 */
+    void dossierSheet.offsetWidth;
+    dossierSheet.classList.add("open");
+
+    var aim = Globe.aimOf(en);
+    if (aim) { Globe.rotateTo(aim[0], aim[1]); Globe.setZoom(2.2); }
+  }
+  function closeDossier() {
+    dossierSheet.classList.remove("open");
+    Globe.setZoom(1);
+    setTimeout(function () { dossier.hidden = true; }, 420);
+  }
+  document.getElementById("tl-dossier-close").addEventListener("click", closeDossier);
+  dossier.addEventListener("click", function (e) { if (e.target === dossier) closeDossier(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !dossier.hidden) closeDossier();
+  });
+
+  /* 点空白海面关弹窗,点陆地开卷宗 */
+  svg.addEventListener("click", function (e) {
+    if (drag.didDrag()) return;
+    var box = svg.getBoundingClientRect();
+    var X = (e.clientX - box.left) / box.width * 240 - 120;
+    var Y = (e.clientY - box.top) / box.height * 240 - 120;
+    var hit = Globe.pick(X, Y);
+    if (hit && hit.country) openDossier(hit.country);
+  });
 
   /* ---------- 罗经线 ----------
    * 波特兰海图最标志性的东西:从罗盘中心放射出去的航向线。
@@ -479,6 +586,8 @@
     flows: function () { return activeFlows(); },
     links: function () { return activeLinks(); },
     zoom: function (z) { Globe.setZoom(z); },
+    openCountry: openDossier, closeCountry: closeDossier,
+    gather: gather, cityCountry: cityCountry,
     toggleFlows: function () { flowToggle.click(); },
     globe: Globe
   };
