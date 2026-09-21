@@ -39,7 +39,7 @@
   </a>
   <div class="tl-heading">
     <h1>🗺 世界历史时间轴</h1>
-    <p>拖动旋转 · 滚轮缩放 · 拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+    <p>拖动旋转 · 滚轮缩放 · 点国家看卷宗</p>
   </div>
   <div class="tl-topbar-actions">
     <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -70,10 +70,12 @@
     <h2>词条</h2>
     <p class="sub">点状态可以循环切换：点亮 → 在读 → 想读。<br>
       改完导出，粘回 <code>词条/&lt;id&gt;/meta.json</code>，再跑 <code>npm run index</code>。</p>
-    <table class="tl-tbl"><thead><tr>
-      <th style="width:70px">年份</th><th>标题</th><th style="width:78px">时代</th>
-      <th style="width:62px">分类</th><th style="width:78px">状态</th>
-    </tr></thead><tbody id="tl-tbl-body"></tbody></table>
+    <div class="tl-tbl-wrap">
+      <table class="tl-tbl"><thead><tr>
+        <th style="width:70px">年份</th><th>标题</th><th style="width:78px">时代</th>
+        <th style="width:62px">分类</th><th style="width:78px">状态</th>
+      </tr></thead><tbody id="tl-tbl-body"></tbody></table>
+    </div>
 
     <div class="tl-new" id="tl-new">
       <div class="row">
@@ -164,6 +166,12 @@
   var btn = document.getElementById("tl-panel-toggle");
   var panel = document.getElementById("tl-panel");
   if (!btn || !panel) return;
+  /* 窄屏默认收起:一屏放不下球 + 面板 + 控制坞三层,
+     先让人看见球,要看清单再拉开 */
+  if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+    panel.classList.add("collapsed");
+    btn.setAttribute("aria-expanded", "false");
+  }
   btn.addEventListener("click", function () {
     var collapsed = panel.classList.toggle("collapsed");
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");

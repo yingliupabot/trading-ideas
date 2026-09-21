@@ -75,6 +75,7 @@
   var linkLayer = document.getElementById("tl-links");
   var linkToggle = document.getElementById("tl-link-toggle");
   var atmos = document.querySelector(".tl-atmos");
+  var globeWrap = document.querySelector(".tl-globe-wrap");
   var rhumbLayer = document.getElementById("tl-rhumbs");
   var eraBand = document.getElementById("tl-eras");
   var eraNote = document.getElementById("tl-era-note");
@@ -645,6 +646,10 @@
       atmos.style.transform = "scale(" + z.toFixed(3) + ")";
       atmos.style.opacity = z > 1.6 ? "0" : (1 - (z - 1) / 0.6).toFixed(2);
     }
+    /* 放大之后球比容器还大:画布满幅成了一块硬边的矩形海,
+       航向线又顺着 overflow:visible 铺满整页,看着像坏了。
+       裁成一个圆窗——凑近看球面本来就该是从圆孔里看出去 */
+    if (globeWrap) globeWrap.classList.toggle("zoomed", Globe.zoom > 1.02);
 
     placePopup();
   }
@@ -791,9 +796,36 @@
     });
   }
 
+  /* 版面的上下留白交给浏览器去量,不写死。
+     控制坞会随时代带、时代注、筛选胶囊换行而长高缩矮,
+     之前几处手写的 248/252/470 就是这么跟实际值走散的,
+     地球下缘被压掉一截、面板叠到坞上都是同一个根因。 */
+  function measureChrome() {
+    var root = document.documentElement;
+    var dock = document.querySelector(".tl-dock");
+    var bar = document.querySelector(".tl-topbar");
+    /* 坞是 fixed 贴底的,真正占掉的是"从视口底边往上"这一段 */
+    if (dock) {
+      var r = dock.getBoundingClientRect();
+      root.style.setProperty("--dock-h", Math.round(window.innerHeight - r.top) + "px");
+    }
+    if (bar) {
+      root.style.setProperty("--top-h", Math.round(bar.getBoundingClientRect().bottom) + "px");
+    }
+  }
+
   buildEraBand();
   refreshStatuses();
   render();
+  measureChrome();
+  if (window.ResizeObserver) {
+    var chromeRO = new ResizeObserver(measureChrome);
+    [".tl-dock", ".tl-topbar"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) chromeRO.observe(el);
+    });
+  }
+  window.addEventListener("resize", measureChrome);
   requestAnimationFrame(loop);
 
   /* 测试与将来的资金流动都要拿到内部状态 */

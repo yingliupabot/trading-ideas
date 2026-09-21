@@ -92,16 +92,39 @@ var Globe = (function () {
     var k = (S / 240) * R * zoom;
     cx2.clearRect(0, 0, S, S);
 
+    /* 先在纸上投一道影。球和纸的色值本来就近,靠投影把球托起来
+       比把海压暗管用——压暗只会得到一个木球(试过,像泥巴)。
+       画在这里而不是用 CSS:影子跟着 k 走,缩放时自动对齐球缘。 */
+    var cast = css("--globe-cast", "");
+    if (cast) {
+      cx2.save();
+      cx2.shadowColor = cast;
+      cx2.shadowBlur = k * 0.16;
+      cx2.shadowOffsetY = k * 0.07;
+      cx2.beginPath(); cx2.arc(half, half, k, 0, Math.PI * 2);
+      cx2.fillStyle = "#000";   /* 填什么都行,下一步就被海盖住,只留外溢的那圈影 */
+      cx2.fill();
+      cx2.restore();
+    }
+
     /* 海洋:偏离中心的径向渐变,球体才有体积感 */
-    var g = cx2.createRadialGradient(half - k * 0.32, half - k * 0.44, k * 0.05, half, half, k);
+    var g = cx2.createRadialGradient(half - k * 0.22, half - k * 0.30, k * 0.05, half, half, k);
     g.addColorStop(0, css("--globe-sea-1", "#26355e"));
     g.addColorStop(0.68, css("--globe-sea-2", "#151f3d"));
     g.addColorStop(1, css("--globe-sea-3", "#0a0f22"));
     cx2.beginPath(); cx2.arc(half, half, k, 0, Math.PI * 2); cx2.fillStyle = g; cx2.fill();
+    /* 球缘描一道墨线。让球读成"纸上的一个物件"靠的是这条线,
+       不是把海压暗——压暗只会变成一个木球。 */
+    var limb = css("--globe-limb", "");
+    if (limb) {
+      cx2.lineWidth = Math.max(1.2, (S / 240) * 1.4);
+      cx2.strokeStyle = limb;
+      cx2.stroke();
+    }
 
     cx2.fillStyle = css("--globe-land", "#5a6796");
     cx2.strokeStyle = css("--globe-stroke", "rgba(91,106,156,.85)");
-    cx2.lineWidth = Math.max(0.5, (S / 240) * 0.35);
+    cx2.lineWidth = Math.max(0.7, (S / 240) * 0.55);   /* 海岸线要看得出是描过的 */
     cx2.lineJoin = "round";
 
     var sc = S / 240;
