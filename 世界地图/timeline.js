@@ -88,6 +88,24 @@
   var cmapMarks = document.getElementById("tl-cmap-marks");
   var backGlobe = document.getElementById("tl-back-globe");
   var view = "globe", countryNow = null, cmap = null, cmarks = [], enterTimer = 0;
+  var morphCv = document.getElementById("tl-morph");
+  var morphCx = morphCv.getContext("2d");
+  var morphRAF = 0, zoomRAF = 0;
+
+  /* 缩放要走过去,不能跳。setZoom 本身是瞬时的 —— 直接调用的话
+     "推近"根本不是推近,是一帧之内换了个倍率。 */
+  function tweenZoom(to, ms, then) {
+    cancelAnimationFrame(zoomRAF);
+    var from = Globe.zoom, t0 = 0;
+    if (Math.abs(to - from) < 0.01) { if (then) then(); return; }
+    zoomRAF = requestAnimationFrame(function step(now) {
+      if (!t0) t0 = now;
+      var k = Math.min(1, (now - t0) / ms);
+      Globe.setZoom(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) zoomRAF = requestAnimationFrame(step);
+      else if (then) then();
+    });
+  }
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
@@ -560,30 +578,57 @@
     return html;
   }
 
-  /* 地球从舞台正中飞到左上角。布局一换位置就是跳的,
-     所以量前后两个矩形,先用反向 transform 把它按回原处再放掉(FLIP)。
-     这样响应式怎么改都不用重算动画。 */
-  function flipGlobe(mutate) {
-    var el = document.querySelector(".tl-globe-wrap");
-    var first = el.getBoundingClientRect();
-    mutate();
-    var last = el.getBoundingClientRect();
-    if (!first.width || !last.width) return;
-    var dx = first.left - last.left, dy = first.top - last.top, k = first.width / last.width;
-    el.style.transition = "none";
-    el.style.transformOrigin = "top left";
-    el.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(" + k.toFixed(4) + ")";
-    /* 飞行途中画布先按落点尺寸重画了,中途被放大就是糊的。
-       把后备画布钉在两者较大的那一档,落地再放开 */
-    Globe.pinSize(Math.max(first.width, last.width));
-    requestAnimationFrame(function () {
-      el.style.transition = "transform 0.62s cubic-bezier(.22,.9,.3,1)";
-      el.style.transform = "";
-      setTimeout(function () {
-        el.style.transition = ""; el.style.transformOrigin = ""; el.style.transform = "";
-        Globe.pinSize(null);
-      }, 660);
+  /* 球在视口里的圆:圆心和半径(像素)。摊平的起点就是它 */
+  function globeDisc() {
+    var r = document.querySelector(".tl-globe-wrap").getBoundingClientRect();
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2,
+             r: r.width * Globe.zoom / 2.4 };     /* viewBox 240 单位里球半径 100 */
+  }
+  function paperRect() {
+    var r = document.getElementById("tl-scroll-paper").getBoundingClientRect();
+    return { x: r.left, y: r.top, w: Math.max(320, r.width), h: Math.max(200, r.height) };
+  }
+  function sizeMorphCanvas() {
+    var d = Math.min(2, window.devicePixelRatio || 1);
+    morphCv.width = Math.round(window.innerWidth * d);
+    morphCv.height = Math.round(window.innerHeight * d);
+    return d;
+  }
+
+  /* 球摊成纸(back=true 时反过来卷回球)。
+     两头的几何都要在**目标视图的布局下**量,所以先切 data-view、
+     把真球和纸藏起来,量完再放动画 —— 否则纸的尺寸是按旧版面算的。 */
+  function runMorph(en, back, done) {
+    cancelAnimationFrame(morphRAF);
+    var disc, paper;
+    if (back) {
+      paper = paperRect();                       /* 纸还在当前视图里 */
+      document.body.setAttribute("data-view", "globe");
+      document.body.classList.add("morphing");
+      disc = globeDisc();                        /* 球回中间之后的位置 */
+    } else {
+      disc = globeDisc();                        /* 球还在中间 */
+      document.body.classList.add("morphing");
+      document.body.setAttribute("data-view", "country");
+      paper = paperRect();
+    }
+    var prep = Globe.morphPrep(en, disc, paper);
+    if (!prep) { document.body.classList.remove("morphing"); done(); return; }
+
+    var dpr = sizeMorphCanvas();
+    morphCv.hidden = false;
+    /* 说了要少动效就别摊了,直接给结果 */
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var DUR = reduce ? 1 : 900, t0 = 0;
+    prep.draw(morphCx, back ? 1 : 0, dpr);
+    morphRAF = requestAnimationFrame(function step(now) {
+      if (!t0) t0 = now;
+      var k = Math.min(1, (now - t0) / DUR);
+      prep.draw(morphCx, back ? 1 - k : k, dpr);
+      if (k < 1) morphRAF = requestAnimationFrame(step);
+      else done();
     });
+    return prep;
   }
 
   function enterCountry(en) {
@@ -604,39 +649,49 @@
        放大 → 贴到地表 → 这块地摊成一张纸。直接切会断掉这口气 */
     var aim = Globe.aimOf(en);
     if (aim) Globe.rotateTo(aim[0], aim[1]);
-    Globe.setZoom(2.6);
+    tweenZoom(2.6, 520);
 
     clearTimeout(enterTimer);
     enterTimer = setTimeout(function () {
       if (countryNow !== en) return;          /* 半路又点了别的国家 */
+      view = "country";
       scrollEl.hidden = false;
       backGlobe.hidden = false;
-      flipGlobe(function () {
-        view = "country";
-        document.body.setAttribute("data-view", "country");
-      });
-      /* 角上那颗是"你在这儿"的定位器,要看得见整个世界,所以缩回 1 */
-      Globe.setZoom(1);
-      /* 等布局按新视图落定再量纸的尺寸,否则投影是按旧宽度算的 */
-      requestAnimationFrame(function () {
+      document.body.classList.add("globe-in");
+
+      runMorph(en, false, function () {
         buildCountryMap(en);
-        void scrollEl.offsetWidth;
-        scrollEl.classList.add("open");
+        /* 画布还盖在上面,底下把纸和图亮出来,等它淡完再撤画布 */
+        document.body.classList.remove("morphing");
+        document.body.classList.remove("globe-in");
+        setTimeout(function () { if (view === "country") morphCv.hidden = true; }, 300);
       });
-    }, 460);
+      /* 角上那颗是"你在这儿"的定位器,要看得见整个世界。
+         此刻真球已经藏起来了,换倍率看不见,不用补间 */
+      cancelAnimationFrame(zoomRAF);
+      Globe.setZoom(1);
+    }, 560);
   }
 
   function exitCountry() {
     clearTimeout(enterTimer);
     if (view !== "country") { countryNow = null; Globe.setZoom(1); return; }
-    scrollEl.classList.remove("open");
+    var en = countryNow;
     countryNow = null;
     backGlobe.hidden = true;
-    flipGlobe(function () {
+    /* 纸卷回球:球要先站回中间、也回到摊开时那个 zoom,两头才接得上 */
+    cancelAnimationFrame(zoomRAF);
+    Globe.setZoom(2.6);
+    runMorph(en, true, function () {
       view = "globe";
-      document.body.setAttribute("data-view", "globe");
+      scrollEl.hidden = true;
+      document.body.classList.remove("morphing");
+      requestAnimationFrame(function () {
+        morphCv.hidden = true;
+        /* 球是在 2.6 倍上接住的,再退回来 —— 直接设 1 会"啪"地跳一下 */
+        tweenZoom(1, 620);
+      });
     });
-    setTimeout(function () { scrollEl.hidden = true; }, 480);
   }
 
   backGlobe.addEventListener("click", exitCountry);
@@ -649,6 +704,25 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && view === "country") exitCountry();
   });
+
+  /* 缩放控件:滚轮和捏合都是藏着的,得有个看得见的入口。
+     倍率同步写出来,"球能不能变大变小"这件事才是能发现的。 */
+  (function () {
+    var zin = document.getElementById("tl-zoom-in");
+    var zout = document.getElementById("tl-zoom-out");
+    var read = document.getElementById("tl-zoom-read");
+    function sync() {
+      var z = Globe.zoom;
+      read.textContent = z.toFixed(1) + "×";
+      zin.disabled = z >= Globe.ZOOM_MAX - 0.01;
+      zout.disabled = z <= Globe.ZOOM_MIN + 0.01;
+    }
+    /* 等比步进,和滚轮一个手感 */
+    zin.addEventListener("click", function () { tweenZoom(Math.min(Globe.ZOOM_MAX, Globe.zoom * 1.5), 260); });
+    zout.addEventListener("click", function () { tweenZoom(Math.max(Globe.ZOOM_MIN, Globe.zoom / 1.5), 260); });
+    Globe.onZoom(sync);
+    sync();
+  })();
 
   /* 鼠标落在哪个国家上:光标换成眼睛,那个国家也亮起来。
      countryAt 是逐环射线法,每次 pointermove 都跑太费;压到每帧一次。 */

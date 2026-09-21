@@ -46,6 +46,16 @@
   </div>
 </div>
 
+<!-- 缩放:滚轮和捏合之外,还得有个看得见的入口 -->
+<div class="tl-zoom" id="tl-zoom" role="group" aria-label="缩放地球">
+  <button id="tl-zoom-in" aria-label="放大" title="放大">+</button>
+  <span id="tl-zoom-read" aria-live="polite">1.0×</span>
+  <button id="tl-zoom-out" aria-label="缩小" title="缩小">−</button>
+</div>
+
+<!-- 摊平用的画布:只在球变成纸的那一秒露面 -->
+<canvas class="tl-morph" id="tl-morph" hidden aria-hidden="true"></canvas>
+
 <!-- 回到地球:国家视图里小球下面那行字 -->
 <button class="tl-back-globe" id="tl-back-globe" hidden>回到地球</button>
 

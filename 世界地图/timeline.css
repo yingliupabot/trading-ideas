@@ -679,15 +679,8 @@ body.tl-immersive {
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   box-shadow: 0 10px 28px -14px var(--globe-cast, rgba(0, 0, 0, 0.3));
-  /* 四个分量都写成百分比。写成 inset(0 100% 0 0) → inset(0 0 0 0) 时
-     两端的计算值形状不一样,Chrome 插不了值,纸是"啪"地一下全开的,
-     只有轴在动 —— 实测过:clip 从 inset(0px 100%…) 直接跳到 inset(0px) */
-  clip-path: inset(0% 100% 0% 0%);
-  transition: clip-path 0.72s cubic-bezier(.3, .86, .36, 1),
-              background-color 0.5s ease, border-color 0.5s ease;
   overflow: hidden;
 }
-.tl-scroll.open .tl-scroll-paper { clip-path: inset(0% 0% 0% 0%); }
 
 /* 两根轴。左边那根不动,右边那根跟着纸的边缘走 */
 .tl-roller {
@@ -710,11 +703,9 @@ body.tl-immersive {
 .tl-roller::before { top: -3px; }
 .tl-roller::after { bottom: -3px; }
 .tl-roller.start { left: 0; }
-.tl-roller.end {
-  left: 0;
-  transition: left 0.72s cubic-bezier(.3, .86, .36, 1);
-}
-.tl-scroll.open .tl-roller.end { left: calc(100% - 18px); }
+/* 轴现在只是纸的边框。铺开这件事交给球的形变去做了 ——
+   再让纸自己从左往右 clip 一遍,两段动画会打架 */
+.tl-roller.end { left: calc(100% - 18px); }
 
 /* 国名压在纸的左下角,像图廓外的题名 */
 .tl-scroll-label {
@@ -850,3 +841,73 @@ body[data-view="country"] #tl-dossier-body { display: block; }
   .tl-scroll-label { left: 14px; bottom: 12px; }
   .tl-scroll-label span { font-size: 22px; letter-spacing: 3px; }
 }
+
+/* ============ 球摊平 ============
+ * 从球切到平面地图不是"切",是同一批顶点从球面位置插值到纸上的位置。
+ * 那一秒钟由这块画布接管:真球和纸上的东西都让位,
+ * 因为画到最后一帧时它和 SVG 那张图逐像素是同一张,交接才看不出缝。
+ */
+.tl-morph[hidden] { display: none !important; }
+.tl-morph {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: none;
+}
+body.morphing .tl-globe-wrap,
+body.morphing .tl-scroll-paper,
+body.morphing .tl-roller { opacity: 0; }
+/* 交接:先在画布**底下**把 SVG 那张图亮出来,再撤画布。
+   反过来做的话有 18 帧是空纸(实测过)——画布已经撤了,SVG 还在淡入。
+   地图本身不淡:它和画布最后一帧逐像素相同,淡入只会露馅。
+   纸和轴要淡,是因为纸上那两道高光渐变画布没画。 */
+.tl-scroll-paper, .tl-roller { transition: opacity 0.24s ease; }
+/* 角上那颗球从小长到位,不是硬出现 */
+body[data-view="country"] .tl-globe-wrap { transition: opacity 0.3s ease, transform 0.42s cubic-bezier(.22,.9,.3,1); }
+body.globe-in .tl-globe-wrap { opacity: 0; transform: scale(0.55); }
+
+/* ============ 缩放控件 ============
+ * 滚轮和双指捏合都能缩放,但两者都是"藏着的"。
+ * 摆一组看得见的按钮在左舷,顺便把当前倍率写出来。
+ */
+.tl-zoom {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: calc(var(--dock-h) + 26px);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: opacity 0.25s ease;
+}
+.tl-zoom button {
+  width: 34px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tl-zoom button:hover { background: var(--accent); color: #fff; }
+.tl-zoom button:disabled { opacity: 0.3; cursor: default; background: none; color: var(--ink); }
+.tl-zoom span {
+  font-size: 10.5px;
+  text-align: center;
+  padding: 3px 0;
+  color: var(--muted);
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  border-block: 1px solid var(--rule);
+}
+/* 国家视图里球是角上的定位器,缩放它没有意义 */
+body[data-view="country"] .tl-zoom { opacity: 0; pointer-events: none; }
