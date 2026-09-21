@@ -73,10 +73,14 @@ var Globe = (function () {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
   }
+  /* 钉住后备画布的尺寸。视图切换时球一边飞一边缩,布局宽度先跳到落点,
+     画布跟着重画成小的,飞行途中被放大就是糊的。钉在大的那一档,落地再放开。 */
+  var pinnedSize = null;
+  function pinSize(px) { pinnedSize = px || null; resizeCanvas(); renderCanvas(); }
   function resizeCanvas() {
     if (!cv) return;
     dpr = Math.min(2, window.devicePixelRatio || 1);
-    cssSize = cv.clientWidth || 1;
+    cssSize = pinnedSize || cv.clientWidth || 1;
     cv.width = Math.round(cssSize * dpr);
     cv.height = Math.round(cssSize * dpr);
   }
@@ -86,7 +90,7 @@ var Globe = (function () {
   }
   function renderCanvas() {
     if (!cx2) return;
-    if (cv.clientWidth && Math.abs(cv.clientWidth - cssSize) > 1) resizeCanvas();
+    if (!pinnedSize && cv.clientWidth && Math.abs(cv.clientWidth - cssSize) > 1) resizeCanvas();
     var S = cv.width, half = S / 2;
     /* viewBox 是 -120..120,球半径 100 → 画布上的球半径 */
     var k = (S / 240) * R * zoom;
@@ -128,8 +132,7 @@ var Globe = (function () {
     cx2.lineJoin = "round";
 
     var sc = S / 240;
-    for (var i = 0; i < countries.length; i++) {
-      var rings = countries[i].rings;
+    function trace(rings) {
       cx2.beginPath();
       for (var j = 0; j < rings.length; j++) {
         var ring = rings[j], open = false;
@@ -142,7 +145,21 @@ var Globe = (function () {
         }
         if (open) cx2.closePath();
       }
+    }
+    for (var i = 0; i < countries.length; i++) {
+      trace(countries[i].rings);
       cx2.fill(); cx2.stroke();
+    }
+    /* 鼠标底下的那个国家单独再描一遍,换成高亮色。
+       --globe-land-hover 一直定义着却没人用,现在它是"可以看进去"的提示 */
+    if (hoverName) {
+      for (i = 0; i < countries.length; i++) {
+        if (countries[i].n !== hoverName) continue;
+        trace(countries[i].rings);
+        cx2.fillStyle = css("--globe-land-hover", css("--globe-land", "#5a6796"));
+        cx2.fill(); cx2.stroke();
+        break;
+      }
     }
   }
 
@@ -364,6 +381,132 @@ var Globe = (function () {
     return "";
   }
 
+  /* 鼠标底下的国家。null 表示在海上或球外 */
+  var hoverName = null;
+  function setHover(n) {
+    if (n === hoverName) return false;
+    hoverName = n;
+    return true;                       /* 变了才值得重画 */
+  }
+
+  /* ---------- 一个国家的平面地图 ----------
+   * 点进国家之后要的不是球面,是把这一块摊平了看。
+   * 等距圆柱投影 + 一次纬度余弦校正:高纬国家不会被横向拉扁。
+   * 返回的 project 让外面能把城市放到同一套坐标里。
+   */
+  function countryMap(name, w, h, padFrac) {
+    var target = null, i, k;
+    for (i = 0; i < countries.length; i++) {
+      if (countries[i].n === name) { target = countries[i]; break; }
+    }
+    if (!target) return null;
+    var pad = padFrac == null ? 0.1 : padFrac;
+
+    /* 主岛/大陆那一环定基准。海外飞地(阿拉斯加、法属圭亚那)离主体十万
+       八千里,让它们参与包围盒,地图就缩成正中一个点了 */
+    var main = target.rings[0];
+    for (k = 1; k < target.rings.length; k++) {
+      if (target.rings[k].length > main.length) main = target.rings[k];
+    }
+    /* 经度的平均不能直接加起来除——跨 180° 时 179 和 -179 会平均成 0。
+       取单位圆上的平均角 */
+    var sx = 0, sy = 0;
+    for (k = 0; k < main.length; k++) { sx += Math.cos(main[k].lng); sy += Math.sin(main[k].lng); }
+    var anchor = Math.atan2(sy, sx) * R2D;
+
+    /* 把经度挪到离锚点近的那一侧,俄罗斯这种跨 180° 的才连得成一块 */
+    function nearLng(lngDeg) {
+      var l = lngDeg;
+      while (l - anchor > 180) l -= 360;
+      while (anchor - l > 180) l += 360;
+      return l;
+    }
+    function toDeg(ring) {
+      return ring.map(function (v) {
+        return [nearLng(v.lng * R2D), Math.asin(v.sinLat) * R2D];
+      });
+    }
+
+    /* 包围盒先按主环算,再把离得不远的环并进来(北爱、科西嘉、北海道要留,
+       阿拉斯加要丢)。40° 是分界:比它远的基本都是海外领地 */
+    var mainDeg = toDeg(main), keep = [mainDeg];
+    var x0 = 180, x1 = -180, y0 = 90, y1 = -90;
+    function grow(pts) {
+      for (var j = 0; j < pts.length; j++) {
+        if (pts[j][0] < x0) x0 = pts[j][0];
+        if (pts[j][0] > x1) x1 = pts[j][0];
+        if (pts[j][1] < y0) y0 = pts[j][1];
+        if (pts[j][1] > y1) y1 = pts[j][1];
+      }
+    }
+    grow(mainDeg);
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    for (k = 0; k < target.rings.length; k++) {
+      if (target.rings[k] === main) continue;
+      var d = toDeg(target.rings[k]);
+      var mx = 0, my = 0;
+      for (i = 0; i < d.length; i++) { mx += d[i][0]; my += d[i][1]; }
+      mx /= d.length; my /= d.length;
+      if (Math.abs(mx - cx) < 40 && Math.abs(my - cy) < 40) { keep.push(d); grow(d); }
+    }
+    /* 一个国家只有一圈很小的环时(城邦、岛国)包围盒会塌成一条线 */
+    if (x1 - x0 < 0.6) { x0 -= 0.3; x1 += 0.3; }
+    if (y1 - y0 < 0.6) { y0 -= 0.3; y1 += 0.3; }
+
+    var kx = Math.cos((y0 + y1) / 2 * D2R);
+    var bw = (x1 - x0) * kx, bh = y1 - y0;
+    var sc = Math.min(w * (1 - pad * 2) / bw, h * (1 - pad * 2) / bh);
+    var ox = (w - bw * sc) / 2 - x0 * kx * sc;
+    var oy = (h - bh * sc) / 2 + y1 * sc;
+
+    function project(lngDeg, latDeg) {
+      return [ox + nearLng(lngDeg) * kx * sc, oy - latDeg * sc];
+    }
+    function pathOf(ringsDeg) {
+      return ringsDeg.map(function (ring) {
+        return ring.map(function (p, j) {
+          var X = ox + p[0] * kx * sc, Y = oy - p[1] * sc;
+          return (j ? "L" : "M") + X.toFixed(1) + "," + Y.toFixed(1);
+        }).join("") + "Z";
+      }).join("");
+    }
+
+    /* 邻国:落进这张纸里的都画上,不然国家是悬空的一块,认不出是哪儿。
+       取景范围直接把投影反解出来——按包围盒乘个系数去猜,中国和俄罗斯
+       会把全世界一百多个国家都算成邻居 */
+    var mx0 = (0 - ox) / (kx * sc), mx1 = (w - ox) / (kx * sc);
+    var my1 = oy / sc, my0 = (oy - h) / sc;
+    var neighbors = [];
+    for (i = 0; i < countries.length; i++) {
+      if (countries[i] === target) continue;
+      var rs = [], touched = false;
+      for (k = 0; k < countries[i].rings.length; k++) {
+        var rd = toDeg(countries[i].rings[k]);
+        var rx0 = 1e9, rx1 = -1e9, ry0 = 1e9, ry1 = -1e9;
+        for (var m = 0; m < rd.length; m++) {
+          if (rd[m][0] < rx0) rx0 = rd[m][0];
+          if (rd[m][0] > rx1) rx1 = rd[m][0];
+          if (rd[m][1] < ry0) ry0 = rd[m][1];
+          if (rd[m][1] > ry1) ry1 = rd[m][1];
+        }
+        /* 两个矩形相交就画:整块比纸还大的国家(点进卢森堡时的德国)
+           一个顶点都不在纸里,但它确实占着半张纸 */
+        if (rx1 >= mx0 && rx0 <= mx1 && ry1 >= my0 && ry0 <= my1) { rs.push(rd); touched = true; }
+      }
+      if (touched) neighbors.push({ n: countries[i].n, d: pathOf(rs) });
+    }
+
+    return {
+      name: name, w: w, h: h,
+      d: pathOf(keep),
+      neighbors: neighbors,
+      project: project,
+      bbox: [x0, y0, x1, y1],
+      /* 一度经线在这张纸上有多少像素——外面拿它定标记大小 */
+      scale: sc
+    };
+  }
+
   /* ---------- 旋转 ---------- */
   var spinTarget = null, autoSpin = 0.035, idleUntil = 0, vel = 0, dragging = false;
 
@@ -439,6 +582,8 @@ var Globe = (function () {
     rotateTo: rotateTo, step: step, attachDrag: attachDrag,
     unproject: unproject, countryAt: countryAt, pick: pick,
     aimOf: aimOf, countryNames: countryNames, outlinePath: outlinePath,
+    countryMap: countryMap, pinSize: pinSize,
+    setHover: setHover, hover: function () { return hoverName; },
     get rotation() { return rot; }, set rotation(v) { rot = v; },
     get tilt() { return tilt; }, setTilt: setTilt,
     get zoom() { return zoom; }, setZoom: setZoom,

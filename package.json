@@ -6,7 +6,8 @@
   "scripts": {
     "shot": "node scripts/shot.js",
     "index": "node scripts/build-index.js",
-    "layout": "node scripts/check-layout.js"
+    "layout": "node scripts/check-layout.js",
+    "country": "node scripts/check-country.js"
   },
   "devDependencies": {
     "playwright": "^1.56.0"

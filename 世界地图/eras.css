@@ -92,7 +92,10 @@
 :root[data-theme="dark"][data-era="industrial"] { --globe-sea-1: #23343d; --globe-sea-2: #1a262d; --globe-sea-3: #121a1f; }
 
 /* 换纸时让颜色缓过去,不要硬切 */
-.tl-stage, .tl-panel, .tl-dock, .tl-heading, .tl-back, .tl-topbar-actions, .tl-dossier-sheet {
+/* 换纸时颜色缓过去。注意别把卷轴的纸列进来:这条 transition 会整条覆盖掉
+   timeline.css 里那条 clip-path,纸就变成"啪"地一下全开(实测踩过)。
+   卷轴的换色写在它自己那条 transition 里。 */
+.tl-stage, .tl-panel, .tl-dock, .tl-heading, .tl-back, .tl-topbar-actions {
   transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
 }
 

@@ -80,8 +80,14 @@
   var eraBand = document.getElementById("tl-eras");
   var eraNote = document.getElementById("tl-era-note");
   var ticks = document.getElementById("tl-ticks");
-  var dossier = document.getElementById("tl-dossier");
-  var dossierSheet = document.getElementById("tl-dossier-sheet");
+  var scrollEl = document.getElementById("tl-scroll");
+  var cmapSvg = document.getElementById("tl-cmap");
+  var cmapSea = document.getElementById("tl-cmap-sea");
+  var cmapNb = document.getElementById("tl-cmap-neighbors");
+  var cmapLand = document.getElementById("tl-cmap-land");
+  var cmapMarks = document.getElementById("tl-cmap-marks");
+  var backGlobe = document.getElementById("tl-back-globe");
+  var view = "globe", countryNow = null, cmap = null, cmarks = [], enterTimer = 0;
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
@@ -452,13 +458,70 @@
     };
   }
 
-  function openDossier(en) {
-    var d = gather(en);
-    document.getElementById("tl-seal-path").setAttribute("d", Globe.outlinePath(en, 60));
-    document.getElementById("tl-dossier-name").textContent = d.cn;
-    document.getElementById("tl-dossier-sub").textContent =
-      d.cn === d.en ? "" : d.en;
+  /* ---------- 国家视图 ----------
+   * 点进一个国家不是弹一张纸,是换一个视图:地球缩到左上角当定位器,
+   * 这张平面地图像卷轴一样铺开,右边那一列换成这个国家的卷宗。
+   */
 
+  /* 卷轴纸的像素尺寸随视口变,投影得按真实尺寸算,
+     不然高瘦的国家在宽纸上会缩成中间一条 */
+  function paperBox() {
+    var r = document.getElementById("tl-scroll-paper").getBoundingClientRect();
+    return [Math.max(320, Math.round(r.width)), Math.max(220, Math.round(r.height))];
+  }
+
+  function buildCountryMap(en) {
+    var box = paperBox();
+    cmapSvg.setAttribute("viewBox", "0 0 " + box[0] + " " + box[1]);
+    cmap = Globe.countryMap(en, box[0], box[1]);
+    cmapNb.innerHTML = "";
+    cmapMarks.innerHTML = "";
+    cmarks = [];
+    if (!cmap) { cmapLand.removeAttribute("d"); return; }
+
+    /* 海先铺满整张纸,陆地盖上去——反过来画的话,
+       简化过的海岸线和纸之间会露出白边 */
+    cmapSea.innerHTML = '<rect class="sea" x="0" y="0" width="' + box[0] + '" height="' + box[1] + '"/>';
+    var nb = "";
+    cmap.neighbors.forEach(function (c) { nb += '<path class="nb" d="' + c.d + '"/>'; });
+    cmapNb.innerHTML = nb;
+    cmapLand.setAttribute("d", cmap.d);
+
+    /* 标记复用球面上那套错开偏移:纽约 4 个事件同坐标,
+       在这张放大的纸上不错开会叠成一坨 */
+    var idxOf = {};
+    TIMELINE_EVENTS.forEach(function (ev, i) { idxOf[ev.id] = i; });
+    gather(en).events.forEach(function (ev) {
+      var i = idxOf[ev.id], c = at(ev, i), pos = cmap.project(c[0], c[1]);
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "tl-cmark cat-" + ev.cat);
+      g.setAttribute("transform", "translate(" + pos[0].toFixed(1) + "," + pos[1].toFixed(1) + ")");
+      g.innerHTML =
+        '<circle class="hit" r="20"/>' +
+        '<circle class="ring" r="15"/>' +
+        '<path class="g" transform="scale(2.4)" d="' + (GLYPH[ev.cat] || GLYPH["经济"]) + '"/>' +
+        '<text x="0" y="30" text-anchor="middle">' + fmtYear(ev.year) + '</text>';
+      g.addEventListener("click", function (e) {
+        e.stopPropagation();
+        setYear(ev.year, true);
+      });
+      cmapMarks.appendChild(g);
+      cmarks.push({ ev: ev, g: g });
+    });
+    paintCountryMarks();
+  }
+
+  /* 拖时间轴时这张纸上的标记跟着亮灭——国家视图里年份依然有意义 */
+  function paintCountryMarks() {
+    cmarks.forEach(function (m) {
+      var st = m.ev.year > currentYear ? "st-future"
+             : m.ev.year === currentYear ? "st-now" : "st-past";
+      m.g.setAttribute("class", "tl-cmark cat-" + m.ev.cat + " " + st +
+                       " k-" + (m.ev.status || "点亮"));
+    });
+  }
+
+  function dossierHTML(d) {
     var html = "";
     if (d.events.length) {
       html += '<h3>这里发生过什么</h3>';
@@ -492,27 +555,126 @@
       /* 176 个国家里只有约 10 个有内容。空状态不该是一张白纸 */
       html = '<p class="tl-doss-empty">这一页还是空白的。<br>' +
              '《逃不开的经济周期》还没写到这里——也可能是它从没被卷进来过。<br>' +
-             '<span>往 events.js 里加一行，这张纸就有字了。</span></p>';
+             '<span>往 词条/ 里加一条，这张纸就有字了。</span></p>';
     }
-    document.getElementById("tl-dossier-body").innerHTML = html;
+    return html;
+  }
 
-    dossier.hidden = false;
-    /* 强制回流一次,否则加 class 和去 hidden 在同一帧,动画不触发 */
-    void dossierSheet.offsetWidth;
-    dossierSheet.classList.add("open");
+  /* 地球从舞台正中飞到左上角。布局一换位置就是跳的,
+     所以量前后两个矩形,先用反向 transform 把它按回原处再放掉(FLIP)。
+     这样响应式怎么改都不用重算动画。 */
+  function flipGlobe(mutate) {
+    var el = document.querySelector(".tl-globe-wrap");
+    var first = el.getBoundingClientRect();
+    mutate();
+    var last = el.getBoundingClientRect();
+    if (!first.width || !last.width) return;
+    var dx = first.left - last.left, dy = first.top - last.top, k = first.width / last.width;
+    el.style.transition = "none";
+    el.style.transformOrigin = "top left";
+    el.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(" + k.toFixed(4) + ")";
+    /* 飞行途中画布先按落点尺寸重画了,中途被放大就是糊的。
+       把后备画布钉在两者较大的那一档,落地再放开 */
+    Globe.pinSize(Math.max(first.width, last.width));
+    requestAnimationFrame(function () {
+      el.style.transition = "transform 0.62s cubic-bezier(.22,.9,.3,1)";
+      el.style.transform = "";
+      setTimeout(function () {
+        el.style.transition = ""; el.style.transformOrigin = ""; el.style.transform = "";
+        Globe.pinSize(null);
+      }, 660);
+    });
+  }
 
+  function enterCountry(en) {
+    var d = gather(en);
+    document.getElementById("tl-seal-path").setAttribute("d", Globe.outlinePath(en, 60));
+    document.getElementById("tl-country-name").textContent = d.cn;
+    document.getElementById("tl-country-sub").textContent = d.cn === d.en ? "" : d.en;
+    document.getElementById("tl-scroll-name").textContent = d.cn;
+    document.getElementById("tl-scroll-sub").textContent = d.cn === d.en ? "" : d.en;
+    document.getElementById("tl-dossier-body").innerHTML = dossierHTML(d);
+
+    countryNow = en;
+    popup.hidden = true; openIdx = null;
+    Globe.setHover(null);
+    svg.classList.remove("on-land");
+
+    /* 先在球上推到这个国家跟前,再把平面图铺开 —— 镜头是连着的:
+       放大 → 贴到地表 → 这块地摊成一张纸。直接切会断掉这口气 */
     var aim = Globe.aimOf(en);
-    if (aim) { Globe.rotateTo(aim[0], aim[1]); Globe.setZoom(2.2); }
+    if (aim) Globe.rotateTo(aim[0], aim[1]);
+    Globe.setZoom(2.6);
+
+    clearTimeout(enterTimer);
+    enterTimer = setTimeout(function () {
+      if (countryNow !== en) return;          /* 半路又点了别的国家 */
+      scrollEl.hidden = false;
+      backGlobe.hidden = false;
+      flipGlobe(function () {
+        view = "country";
+        document.body.setAttribute("data-view", "country");
+      });
+      /* 角上那颗是"你在这儿"的定位器,要看得见整个世界,所以缩回 1 */
+      Globe.setZoom(1);
+      /* 等布局按新视图落定再量纸的尺寸,否则投影是按旧宽度算的 */
+      requestAnimationFrame(function () {
+        buildCountryMap(en);
+        void scrollEl.offsetWidth;
+        scrollEl.classList.add("open");
+      });
+    }, 460);
   }
-  function closeDossier() {
-    dossierSheet.classList.remove("open");
-    Globe.setZoom(1);
-    setTimeout(function () { dossier.hidden = true; }, 420);
+
+  function exitCountry() {
+    clearTimeout(enterTimer);
+    if (view !== "country") { countryNow = null; Globe.setZoom(1); return; }
+    scrollEl.classList.remove("open");
+    countryNow = null;
+    backGlobe.hidden = true;
+    flipGlobe(function () {
+      view = "globe";
+      document.body.setAttribute("data-view", "globe");
+    });
+    setTimeout(function () { scrollEl.hidden = true; }, 480);
   }
-  document.getElementById("tl-dossier-close").addEventListener("click", closeDossier);
-  dossier.addEventListener("click", function (e) { if (e.target === dossier) closeDossier(); });
+
+  backGlobe.addEventListener("click", exitCountry);
+  /* 点小球回全局视图 —— 用户想要的就是这个:地球一直在,点它就回去 */
+  svg.addEventListener("click", function (e) {
+    if (view !== "country") return;
+    e.stopPropagation();
+    exitCountry();
+  }, true);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !dossier.hidden) closeDossier();
+    if (e.key === "Escape" && view === "country") exitCountry();
+  });
+
+  /* 鼠标落在哪个国家上:光标换成眼睛,那个国家也亮起来。
+     countryAt 是逐环射线法,每次 pointermove 都跑太费;压到每帧一次。 */
+  var hoverPend = null, hoverQueued = false;
+  svg.addEventListener("pointermove", function (e) {
+    if (view === "country") return;
+    hoverPend = e;
+    if (hoverQueued) return;
+    hoverQueued = true;
+    requestAnimationFrame(function () {
+      hoverQueued = false;
+      var ev = hoverPend; hoverPend = null;
+      if (!ev) return;
+      var box = svg.getBoundingClientRect();
+      var X = (ev.clientX - box.left) / box.width * 240 - 120;
+      var Y = (ev.clientY - box.top) / box.height * 240 - 120;
+      var hit = Globe.pick(X, Y);
+      var name = hit && hit.country ? hit.country : null;
+      if (Globe.setHover(name)) {
+        svg.classList.toggle("on-land", !!name);
+        Globe.renderCanvas();
+      }
+    });
+  });
+  svg.addEventListener("pointerleave", function () {
+    if (Globe.setHover(null)) { svg.classList.remove("on-land"); Globe.renderCanvas(); }
   });
 
   /* 点空白海面关弹窗,点陆地开卷宗 */
@@ -522,7 +684,7 @@
     var X = (e.clientX - box.left) / box.width * 240 - 120;
     var Y = (e.clientY - box.top) / box.height * 240 - 120;
     var hit = Globe.pick(X, Y);
-    if (hit && hit.country) openDossier(hit.country);
+    if (hit && hit.country) enterCountry(hit.country);
   });
 
   /* ---------- 罗经线 ----------
@@ -657,6 +819,7 @@
   /* ---------- 年份 ---------- */
   function render() {
     applyEra(eraOf(currentYear));
+    if (view === "country") paintCountryMarks();
     yearBadge.textContent = fmtYear(currentYear);
     nowYear.textContent = fmtYear(currentYear);
     slider.value = currentYear;
@@ -837,7 +1000,12 @@
     flows: function () { return activeFlows(); },
     links: function () { return activeLinks(); },
     zoom: function (z) { Globe.setZoom(z); },
-    openCountry: openDossier, closeCountry: closeDossier,
+    openCountry: enterCountry, closeCountry: exitCountry,
+    view: function () { return view; },
+    countryMarks: function () { return cmarks.map(function (m) {
+      return { year: m.ev.year, cls: m.g.getAttribute("class"),
+               at: m.g.getAttribute("transform") }; }); },
+    cmap: function () { return cmap; },
     gather: gather, cityCountry: cityCountry,
     era: function () { return era; }, eras: ERAS, glyphs: GLYPH,
     drafts: function () { return drafts; }, rows: allRows,
