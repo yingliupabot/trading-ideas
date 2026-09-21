@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prop Trading 到底有多少种？一张赚钱模式地图 · Trading Ideas</title>
+<link rel="stylesheet" href="../../../styles.css">
+<script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+<link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#why">为什么问这个问题</a>
+    <a href="#map">五种生意，一张表</a>
+    <a href="#money">分别怎么赚钱</a>
+    <a href="#edge">edge 到底是什么</a>
+    <a href="#retail">散户能复制什么（笔者想法）</a>
+    <a href="#source">关键链接</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>Prop Trading 到底有多少种？一张赚钱模式地图</h1>
+    <p>顶级做市商赚价差、零售公司赚考试费、交易台赚交易员组合、真自营赚方向+永久资本——<br>
+    “prop trading”一词下面是五种完全不同的生意，存在不等于参与者赚钱</p>
+    <div class="post-meta">
+      <span class="date">2026-09-20</span>
+      <span class="tag-pill">industry</span>
+      <span class="tag-pill">prop-trading</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="why">为什么问这个问题</h2>
+  <p>一个常见的直觉是：“prop trading 公司那么多还都活着，说明在家做交易是能赚钱的，不然早倒闭了。”</p>
+  <p>这个推理错在一个混淆：<strong>活下来的是“中间商”，不是“参与者”</strong>。赌场活得好好的，证明不了赌客赚钱；
+  券商活得好好的，证明不了客户赚钱。prop trading 这个行当里，真正稳定赚钱的恰好是离“在家做交易”最远的两种。</p>
+  <div class="callout">先说结论：赚钱的从来不是“交易”这个动作本身，而是动作背后的<strong>结构性优势</strong>。
+  下面五种生意，名字都叫 prop trading，游戏完全不同。</div>
+
+  <h2 class="sec" id="map">五种生意，一张表</h2>
+  <table>
+    <thead><tr><th>类型</th><th>代表</th><th>利润真正来源</th><th>散户能参与吗</th></tr></thead>
+    <tbody>
+      <tr><td><strong>顶级做市商 / HFT</strong></td><td>Jane Street、Citadel Securities、Hudson River、Optiver、SIG</td>
+        <td>买卖价差 × 天量成交 × 速度 + 订单流</td><td>不能，连入场券都没有</td></tr>
+      <tr><td><strong>零售“资助交易员”公司</strong></td><td>FTMO、Topstep</td>
+        <td>挑战考试费（不是交易盈利）</td><td>能交钱，但你是被收割的一方</td></tr>
+      <tr><td><strong>传统自营交易台</strong></td><td>SMB、T3、Maverick</td>
+        <td>交易员组合的大数定律 + 硬风控砍输家</td><td>能应聘，多数活不过第一年</td></tr>
+      <tr><td><strong>真自营（方向性）</strong></td><td>DRW、多策略基金 pod、大宗商品行</td>
+        <td>自有资金的方向押注 + 永久资本 + 组织机器</td><td>不能，门槛是几个亿起</td></tr>
+      <tr><td><strong>银行自营部</strong>（已死）</td><td>高盛旧自营部</td>
+        <td>2010 年沃尔克规则后被监管拆掉，搬到了上面的第四类</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec" id="money">分别怎么赚钱</h2>
+  <p><strong>1. 顶级做市商：赚的是“过路费”。</strong>
+  Jane Street 2025 年净交易收入 396 亿美元，超过任何一家华尔街大投行，3500 名员工人均创收超 1100 万美元；
+  Citadel Securities 约 122 亿、Hudson River 约 123 亿。它们不赌方向，靠同时报买价卖价收价差，
+  波动越大赚得越多——2025 年的波动市道直接把它们送上了历史纪录。技术、延迟、订单流、人才，
+  每一项都是散户永远够不着的军备。</p>
+  <p><strong>2. 零售考试费公司：赚的是“报名费”。</strong>
+  FTMO 2023 年收入约 3.29 亿美元，只给过关的交易员分了 7500 万——中间 2.54 亿的差额，
+  来自没通过考核的人交的挑战费。挑战通过率只有 3–7%，而且 80% 以上的“资助账户”是模拟盘：
+  你的盈利不是从市场里赚的，提现是从费用池里付的。所以它的存在证明的是<strong>收考试费这个生意</strong>很赚钱，
+  就像赌场的存在证明不了赌客赚钱。</p>
+  <p><strong>3. 传统自营交易台：赚的是“组合管理”。</strong>
+  招几十上百个短线交易员，用公司资金 + 专业杠杆 + 极低成本做日内动量、配对、事件驱动，
+  风控官拿着尚方宝剑随时砍掉亏货。赚钱靠的是筛选 + 分散 + 硬风控 + 低成本，
+  不是某个交易员是天才——公司这个组合是赚钱的，但里面大多数交易员活不过第一年，赢家的利润覆盖输家还有富余。</p>
+  <p><strong>4. 真自营：赚的是“结构”。</strong>分三种形态：</p>
+  <ul class="tight">
+    <li><strong>DRW 式</strong>：1992 年芝加哥期权做市起家，底子是“给任何衍生品定价”的能力；
+    旗下 Cumberland 2014 年就进场 crypto。钱全是创始人自己的、永不赎回——可以在流动性枯竭时当全场唯一的买家，
+    在回撤里死扛到底。散户和基金经理最缺的恰恰就是这个：时间。</li>
+    <li><strong>多策略基金 pod 式</strong>（Citadel / Millennium / Point72）：雇两三百个基金经理各做各的，
+    公司只做三件事——砍输家、给赢家加钱、用亿级另类数据预算拉高所有人的夏普。单个经理的 edge 会衰减，
+    但平台不停换人换策略，公司的夏普来自“聚合”。</li>
+    <li><strong>大宗商品行</strong>（Vitol、Trafigura）：一半利润来自拿自有资金赌油价方向。</li>
+  </ul>
+  <p><strong>5. 银行自营部：被监管杀死的物种。</strong>
+  2010 年多德-弗兰克法案的沃尔克规则禁止银行拿自营资金投机，高盛传奇的自营部直接被拆。
+  自营交易没有消失，是从银行内部搬到了独立公司——监管掀了银行的牌桌，玩家换个场子继续玩。</p>
+
+  <h2 class="sec" id="edge">edge 到底是什么</h2>
+  <p>把上面几家真正的自营放在一起看，会发现一个共同点：
+  <strong>真正的 edge 从来不是“某个神奇信号”，而是生产信号的机器本身</strong>——可以叫它 <strong>meta-edge</strong>。</p>
+  <ul class="tight">
+    <li>文艺复兴的 Medallion 没有永恒信号，它的信号半衰期可能只有几个月；但它有几百个 PhD 每天测试成千上万个想法，
+    老信号死了新信号顶上——<strong>流水线本身</strong>就是 meta-edge。</li>
+    <li>Point72 的“砍输家、给赢家加钱、不断换基金经理”——<strong>组织机器</strong>就是 meta-edge，里面任何单个经理的策略都不是。</li>
+    <li>DRW 的“创始人自己的钱、永不赎回”——<strong>资本结构</strong>就是 meta-edge，让它能玩别人玩不起的游戏。</li>
+  </ul>
+  <div class="callout">打个比方：edge 是“一种捕鱼技巧”，meta-edge 是“一艘船 + 声呐 + 训练船员的体系”。
+  某种技巧失效了，声呐找到新渔场，船员练出新技巧，继续捕。edge 一定会过期（Two Sigma 近年回报平平、创始人内斗见报就是例子），
+  唯一不过期的是生产 edge 的能力。</div>
+
+  <h2 class="sec" id="retail">散户能复制什么（笔者想法）</h2>
+  <p>以下为笔者解读，非回测事实：上面这些 meta-edge 里，没有一个是散户能复制的——不是因为你不够聪明，
+  是因为 edge 长在资本结构、组织形态和人才密度上，不长在某个可以公开的公式里。</p>
+  <p>但散户有自己的 mini meta-edge：<strong>低成本、长期限、不犯蠢，外加一套“系统化验证、绝不自我欺骗”的研究方法</strong>。
+  我们过去一个多月亲手做的 34 个测试（31 个证伪、留下 1 个，还知道它在 QQQ 上失效）——这台不断证伪自己的机器，
+  就是散户版的生产 edge 的流水线。它不直接印钱，但它保证你持续避开亏大钱的坑，而散户亏钱十有八九不是输在没 alpha，
+  是输在买了自己没看懂的东西。</p>
+  <p>一句话：别把“在家 trading”理解成“在家找圣杯”，理解成“在家当自己的基金经理”——
+  管好一个以 SPY 为核心的组合，偶尔加一点验证过的结构，它就是靠谱的。</p>
+
+  <h2 class="sec" id="source">关键链接</h2>
+  <ul class="tight">
+    <li><a href="https://www.sharecafe.com.au/2026/04/25/jane-street-sets-new-trading-revenue-record/">Jane Street 2025 年 396 亿美元净交易收入（ShareCafe 转 Bloomberg）</a></li>
+    <li><a href="https://www.linkedin.com/pulse/prop-firms-dont-profit-from-your-trading-success-pass-zabavnikov-kaz4e">Prop firms profit from your failure, not success（FTMO 3.29亿/7500万）</a></li>
+    <li><a href="https://proptradingvibes.com/blog/how-do-prop-firms-make-money">How Do Prop Firms Make Money（考试费模式拆解）</a></li>
+    <li><a href="https://github.com/defiprime/defiprime1/blob/HEAD/content/blog/2026-06-17-onchain-prop-firms.md">Onchain prop firms：挑战漏斗数据（通过率/提现率）</a></li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../../theme.js"></script>
+</body>
+</html>
