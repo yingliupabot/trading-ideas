@@ -52,6 +52,67 @@ var Globe = (function () {
 
   function mount(group) { landGroup = group; if (countries.length) buildPaths(); }
 
+  /* ---------- canvas 渲染 ----------
+   * 176 条每帧都在变的 SVG 路径,浏览器栅格化本身就把帧率封在 35fps 左右
+   * (实测:JS 只占 3.5ms/帧,余下全是渲染)。canvas 一次性描完所有线段,
+   * 代价与顶点数成正比而不是与路径元素数成正比。
+   */
+  var cv = null, cx2 = null, cssSize = 0, dpr = 1;
+  function mountCanvas(canvas) {
+    cv = canvas; cx2 = canvas.getContext("2d");
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+  }
+  function resizeCanvas() {
+    if (!cv) return;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cssSize = cv.clientWidth || 1;
+    cv.width = Math.round(cssSize * dpr);
+    cv.height = Math.round(cssSize * dpr);
+  }
+  function css(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+  function renderCanvas() {
+    if (!cx2) return;
+    if (cv.clientWidth && Math.abs(cv.clientWidth - cssSize) > 1) resizeCanvas();
+    var S = cv.width, half = S / 2;
+    /* viewBox 是 -120..120,球半径 100 → 画布上的球半径 */
+    var k = (S / 240) * R;
+    cx2.clearRect(0, 0, S, S);
+
+    /* 海洋:偏离中心的径向渐变,球体才有体积感 */
+    var g = cx2.createRadialGradient(half - k * 0.32, half - k * 0.44, k * 0.05, half, half, k);
+    g.addColorStop(0, css("--globe-sea-1", "#26355e"));
+    g.addColorStop(0.68, css("--globe-sea-2", "#151f3d"));
+    g.addColorStop(1, css("--globe-sea-3", "#0a0f22"));
+    cx2.beginPath(); cx2.arc(half, half, k, 0, Math.PI * 2); cx2.fillStyle = g; cx2.fill();
+
+    cx2.fillStyle = css("--globe-land", "#5a6796");
+    cx2.strokeStyle = css("--globe-stroke", "rgba(91,106,156,.85)");
+    cx2.lineWidth = Math.max(0.5, (S / 240) * 0.35);
+    cx2.lineJoin = "round";
+
+    var sc = S / 240;
+    for (var i = 0; i < countries.length; i++) {
+      var rings = countries[i].rings;
+      cx2.beginPath();
+      for (var j = 0; j < rings.length; j++) {
+        var ring = rings[j], open = false;
+        for (var m = 0; m < ring.length; m++) {
+          var v = ring[m], q = projectRad(v.lng, v.sinLat, v.cosLat, 0);
+          if (!q) { open = false; continue; }
+          var X = half + q[0] * sc, Y = half + q[1] * sc;
+          if (open) cx2.lineTo(X, Y); else cx2.moveTo(X, Y);
+          open = true;
+        }
+        if (open) cx2.closePath();
+      }
+      cx2.fill(); cx2.stroke();
+    }
+  }
+
   /* ---------- 投影 ----------
    * 正射投影:z 是朝向观察者的分量。z<0 即球体背面,被自己挡住。
    * alt>0 的点(抬起的弧线)如果落在球体轮廓之外,即使 z<0 也看得见。
@@ -135,25 +196,45 @@ var Globe = (function () {
     var p = latDeg * D2R, l = lngDeg * D2R;
     return [Math.cos(p) * Math.cos(l), Math.cos(p) * Math.sin(l), Math.sin(p)];
   }
-  function arcPath(a, b, opts) {
+  /* 两点间的球面角距(度)。抬升高度按它缩放:短程贴着球走,跨洋才拱起来 */
+  function angleBetween(a, b) {
+    var v1 = toVec(a[0], a[1]), v2 = toVec(b[0], b[1]);
+    var d = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+    return Math.acos(Math.max(-1, Math.min(1, d))) * R2D;
+  }
+  /* 端点在整条弧的生命周期里都不变,预备一次即可。
+     原先每取一个点都重算两端的单位向量,56 步就白算 112 次——实测掉到 43fps。 */
+  function prepArc(a, b) {
+    var v1 = toVec(a[0], a[1]), v2 = toVec(b[0], b[1]);
+    var d = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+    var om = Math.acos(Math.max(-1, Math.min(1, d)));
+    return { v1: v1, v2: v2, om: om, sin: Math.sin(om) };
+  }
+  function arcPointFrom(pr, t, lift) {
+    var lat, lng;
+    if (pr.om < 1e-9) { lng = Math.atan2(pr.v1[1], pr.v1[0]) * R2D; lat = Math.asin(pr.v1[2]) * R2D; }
+    else {
+      var k1 = Math.sin((1 - t) * pr.om) / pr.sin, k2 = Math.sin(t * pr.om) / pr.sin;
+      var x = pr.v1[0] * k1 + pr.v2[0] * k2, y = pr.v1[1] * k1 + pr.v2[1] * k2, z = pr.v1[2] * k1 + pr.v2[2] * k2;
+      var m = Math.sqrt(x * x + y * y + z * z);
+      lng = Math.atan2(y / m, x / m) * R2D; lat = Math.asin(z / m) * R2D;
+    }
+    return project(lng, lat, (lift || 0) * Math.sin(Math.PI * t));
+  }
+  function arcPathFrom(pr, opts) {
     opts = opts || {};
-    var n = opts.steps || 64, lift = opts.lift || 0, t1 = opts.to == null ? 1 : opts.to;
+    var n = opts.steps || 64, lift = opts.lift || 0;
     var out = [], open = false;
     for (var i = 0; i <= n; i++) {
-      var t = (i / n) * t1;
-      var ll = lerpPoint(a, b, t);
-      var q = project(ll[0], ll[1], lift * Math.sin(Math.PI * t));
+      var q = arcPointFrom(pr, i / n, lift);
       if (!q) { open = false; continue; }
       out.push(open ? "L" : "M", q[0].toFixed(1), ",", q[1].toFixed(1));
       open = true;
     }
     return out.join("");
   }
-  /* 弧线上 t 处的屏幕坐标——粒子沿流动路径移动时用 */
-  function arcPointAt(a, b, t, lift) {
-    var ll = lerpPoint(a, b, t);
-    return project(ll[0], ll[1], (lift || 0) * Math.sin(Math.PI * t));
-  }
+  function arcPath(a, b, opts) { return arcPathFrom(prepArc(a, b), opts); }
+  function arcPointAt(a, b, t, lift) { return arcPointFrom(prepArc(a, b), t, lift); }
 
   /* ---------- 旋转 ---------- */
   var spinTarget = null, autoSpin = 0.035, idleUntil = 0, vel = 0, dragging = false;
@@ -211,10 +292,11 @@ var Globe = (function () {
 
   return {
     R: R,
-    setWorld: setWorld, mount: mount,
+    setWorld: setWorld, mount: mount, mountCanvas: mountCanvas, renderCanvas: renderCanvas,
     project: project, visible: visible, depth: depth,
     renderLand: renderLand, ringPath: ringPath,
-    arcPath: arcPath, arcPointAt: arcPointAt, lerpPoint: lerpPoint,
+    arcPath: arcPath, arcPointAt: arcPointAt, lerpPoint: lerpPoint, angleBetween: angleBetween,
+    prepArc: prepArc, arcPathFrom: arcPathFrom, arcPointFrom: arcPointFrom,
     rotateTo: rotateTo, step: step, attachDrag: attachDrag,
     get rotation() { return rot; }, set rotation(v) { rot = v; },
     get tilt() { return tilt; }, setTilt: setTilt

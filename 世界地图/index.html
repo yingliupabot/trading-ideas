@@ -14,26 +14,14 @@
 <!-- 地球舞台:深空铺满视口,球体居中 -->
 <div class="tl-stage">
   <div class="tl-globe-wrap">
+    <canvas id="tl-canvas" aria-hidden="true"></canvas>
     <div class="tl-atmos" aria-hidden="true"></div>
     <svg id="world-map" viewBox="-120 -120 240 240" role="img"
          aria-label="可拖动旋转的地球，历史事件随年份在球面上点亮">
-      <defs>
-        <radialGradient id="tlOcean" cx="34%" cy="28%">
-          <stop offset="0%" stop-color="var(--globe-sea-1)"/>
-          <stop offset="68%" stop-color="var(--globe-sea-2)"/>
-          <stop offset="100%" stop-color="var(--globe-sea-3)"/>
-        </radialGradient>
-        <!-- 双层高斯模糊再合并:核心锐利,外圈辉光 -->
-        <filter id="tlBloom" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="1.4" result="b1"/>
-          <feGaussianBlur stdDeviation="4" result="b2"/>
-          <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      <circle class="globe-ocean" r="100"/>
-      <g id="tl-land"></g>
-      <g id="tl-waves" filter="url(#tlBloom)"></g>
-      <g id="tl-markers" filter="url(#tlBloom)"></g>
+      <g id="tl-flows"></g>
+      <g id="tl-waves"></g>
+      <g id="tl-markers"></g>
+      <g id="tl-particles"></g>
     </svg>
     <div class="tl-popup" id="tl-popup" hidden></div>
   </div>
@@ -79,6 +67,8 @@
     <button data-cat="战争" class="tag-pill tl-cat-战争">战争</button>
     <button data-cat="科技" class="tag-pill tl-cat-科技">科技</button>
     <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
+    <span class="tl-filter-sep" aria-hidden="true"></span>
+    <button id="tl-flow-toggle" class="tag-pill tl-flow-pill" aria-pressed="true">💸 资金流动</button>
   </div>
   <div class="tl-transport">
     <div class="tl-year-badge"><span id="tl-year">1720</span></div>
@@ -94,6 +84,7 @@
 
 <script src="map.js"></script>
 <script src="events.js"></script>
+<script src="flows.js"></script>
 <script src="globe.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>
