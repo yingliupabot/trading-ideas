@@ -34,7 +34,9 @@ function check(list) {
   list.forEach(function (m) {
     if (ids[m.id]) errs.push("重复的词条 id:" + m.id);
     ids[m.id] = true;
-    if (typeof m.year !== "number") errs.push(m.id + ":缺 year 或不是数字");
+    /* 有地点的是"事件",要能落在地球上,所以必须有年份;
+       没地点的是"概念"(比如"肥尾效应"),只在图谱里占位,不要求年份。 */
+    if (m.place && typeof m.year !== "number") errs.push(m.id + ":有 place 就必须有 year");
     if (!m.title) errs.push(m.id + ":缺 title");
     if (m.status && STATUS.indexOf(m.status) < 0)
       errs.push(m.id + ":status 只能是 " + STATUS.join("/") + ",收到 " + m.status);
@@ -65,10 +67,50 @@ function main() {
              "const ENTRIES = " + JSON.stringify(list, null, 2) + ";\n";
   fs.writeFileSync(OUT, body, "utf8");
 
+  writeNotes(list);
+
   var by = {};
   list.forEach(function (m) { var s = m.status || "未标"; by[s] = (by[s] || 0) + 1; });
   console.log("✓ 生成 " + path.relative(ROOT, OUT));
   console.log("  词条 " + list.length + " 条 · " +
     Object.keys(by).map(function (k) { return k + " " + by[k]; }).join(" / "));
 }
+/* notes.html 的章节表原来是手写的,和词条会漂移。改成在标记之间生成——
+   仍然是静态 HTML(不靠 JS 渲染),但真相只有一份。 */
+function writeNotes(list) {
+  var NOTES = path.join(ROOT, "notes.html");
+  if (!fs.existsSync(NOTES)) return;
+  var html = fs.readFileSync(NOTES, "utf8");
+  var S = "<!-- 词条:开始 -->", E = "<!-- 词条:结束 -->";
+  var i = html.indexOf(S), j = html.indexOf(E);
+  if (i < 0 || j < 0) { console.log("  (notes.html 里没有词条标记,跳过)"); return; }
+
+  var chapters = list.filter(function (m) { return m.book; })
+    .sort(function (a, b) { return a.book.chapter - b.book.chapter; });
+  var parts = [], seen = {};
+  chapters.forEach(function (m) {
+    if (!seen[m.book.part]) { seen[m.book.part] = []; parts.push(m.book.part); }
+    seen[m.book.part].push(m);
+  });
+
+  var body = parts.map(function (part, k) {
+    var cells = seen[part].map(function (m) {
+      /* 两个轴,不要混成一个:status 是"我懂没懂",note 是"写没写"。
+         懂了但没写,和没懂,是完全不同的两件事。 */
+      var mark = m.note ? " · 🎨" : (m.status === "点亮" ? " · 已懂" : (m.status === "在读" ? " · 在读" : ""));
+      var inner = '<span class="ch-num">第 ' + m.book.chapter + ' 章' + mark + '</span>' +
+                  '<span class="ch-title">' + m.title + '</span>';
+      return m.note
+        ? '<a class="chapter-cell painting" href="' + m.note + '">' + inner + '</a>'
+        : '<span class="chapter-cell ' + (m.status === "想读" ? "todo" : "known") + '">' + inner + '</span>';
+    }).join("\n        ");
+    return '      <h3 class="part-title" id="part' + (k + 1) + '">' + part + '</h3>\n' +
+           '      <div class="chapter-grid">\n        ' + cells + '\n      </div>';
+  }).join("\n\n");
+
+  var out = html.slice(0, i + S.length) + "\n" + body + "\n      " + html.slice(j);
+  fs.writeFileSync(NOTES, out, "utf8");
+  console.log("✓ 更新 notes.html 章节表(" + chapters.length + " 章)");
+}
+
 main();

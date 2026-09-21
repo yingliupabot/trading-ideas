@@ -7,12 +7,17 @@
   /* 词条.js 由 scripts/build-index.js 从 词条/<id>/meta.json 生成,是唯一真相。
      下面把它摊平成渲染代码原来吃的形状——这样既只剩一份清单,
      又不用把已经测过的渲染路径全部重写一遍。 */
-  var TIMELINE_EVENTS = ENTRIES.map(function (e) {
+  /* 只有带地点的"事件"能落在地球上。没地点的是"概念"(比如"肥尾效应"),
+     它们在图谱和目录里占位,但地球上没有它们的位置。 */
+  var TIMELINE_EVENTS = ENTRIES.filter(function (e) { return e.place && typeof e.year === "number"; }).map(function (e) {
     return {
       id: e.id, year: e.year, era: e.era, status: e.status || "点亮",
       city: e.place.city, country: e.place.country,
       lat: e.place.lat, lng: e.place.lng,
-      cat: e.cat, title: e.title, summary: e.summary, chapter: e.note
+      cat: e.cat, title: e.title, summary: e.summary,
+      /* note 存的是仓库根相对路径(路径的含义不该取决于谁在读),
+         世界地图在子目录里,所以补一个 ../ */
+      chapter: e.note ? "../" + e.note : null
     };
   });
   var byId = {};
@@ -35,6 +40,24 @@
   var era = null, MIN_YEAR = _e0.from, MAX_YEAR = _e0.to;
   var NS = "http://www.w3.org/2000/svg";
   var CALM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* 墨绘符号取代分类色。
+     古地图本来就用图画符号标地物,而且靠形状区分对色盲完全免疫——
+     比任何配色方案都稳。代价是纸上少了五种颜色,但那本来就是 dashboard 的遗产。
+     全部描边不填充,才是墨线画的质感。 */
+  var GLYPH = {
+    /* 圆形方孔钱 */
+    "经济": "M0,-4.3A4.3,4.3 0 1,1 -0.01,-4.3Z M-1.5,-1.5H1.5V1.5H-1.5Z",
+    /* 王冠 */
+    "政治": "M-4.2,3.2V-2.6L-2,-0.6L0,-3.6L2,-0.6L4.2,-2.6V3.2Z",
+    /* 交叉双剑 */
+    "战争": "M-3.6,-3.6L3.6,3.6 M3.6,-3.6L-3.6,3.6 M-4.8,-2.4L-2.4,-4.8 M4.8,-2.4L2.4,-4.8",
+    /* 齿轮:圆 + 四根辐条伸出轮廓 */
+    "科技": "M0,-2.8A2.8,2.8 0 1,1 -0.01,-2.8Z M0,-4.6V-2.8 M0,2.8V4.6 M-4.6,0H-2.8 M2.8,0H4.6",
+    /* 翻开的书 */
+    "文化": "M0,-2.6V3.4 M0,-2.6C-1.4,-3.8 -3,-3.8 -4.2,-3.2V2.8C-3,2.2 -1.4,2.2 0,3.4 M0,-2.6C1.4,-3.8 3,-3.8 4.2,-3.2V2.8C3,2.2 1.4,2.2 0,3.4"
+  };
+
 
   var svg = document.getElementById("world-map");
   var slider = document.getElementById("tl-slider");
@@ -125,15 +148,16 @@
     g.setAttribute("class", "tl-marker cat-" + ev.cat);
     /* 透明热区:圆点本身太小,手指点不中 */
     var hit = document.createElementNS(NS, "circle");
-    hit.setAttribute("r", "7"); hit.setAttribute("class", "tl-hit");
+    hit.setAttribute("r", "6.5"); hit.setAttribute("class", "tl-hit");
     var halo = document.createElementNS(NS, "circle");
     halo.setAttribute("r", "4"); halo.setAttribute("class", "tl-halo");
     /* 辉光用一层大而透明的同色圆,不用 feGaussianBlur。
        滤镜要对每个移动元素逐帧重新求值,实测三处 bloom 吃掉 11fps。 */
     var glow = document.createElementNS(NS, "circle");
     glow.setAttribute("class", "tl-glow");
-    var dot = document.createElementNS(NS, "circle");
-    dot.setAttribute("class", "tl-dot");
+    var dot = document.createElementNS(NS, "path");
+    dot.setAttribute("class", "tl-glyph");
+    dot.setAttribute("d", GLYPH[ev.cat] || GLYPH["经济"]);
     g.appendChild(hit); g.appendChild(halo); g.appendChild(glow); g.appendChild(dot);
     g.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -269,7 +293,13 @@
     Object.keys(drafts).forEach(function (id) {
       if (!ENTRIES.some(function (e) { return e.id === id; })) rows.push(drafts[id]);
     });
-    return rows.sort(function (a, b) { return a.year - b.year; });
+    /* 概念词条没有年份,排在有年份的之后,按章节序 */
+    return rows.sort(function (a, b) {
+      var ay = typeof a.year === "number", by = typeof b.year === "number";
+      if (ay && by) return a.year - b.year;
+      if (ay !== by) return ay ? -1 : 1;
+      return ((a.book && a.book.chapter) || 0) - ((b.book && b.book.chapter) || 0);
+    });
   }
 
   var STATUSES = ["点亮", "在读", "想读"];
@@ -280,9 +310,9 @@
     tbody.innerHTML = allRows().map(function (e) {
       var dirty = !!drafts[e.id];
       return '<tr class="' + (dirty ? "dirty" : "") + '" data-id="' + e.id + '">' +
-        '<td class="y">' + fmtYear(e.year) + '</td>' +
+        '<td class="y">' + (typeof e.year === "number" ? fmtYear(e.year) : "—") + '</td>' +
         '<td>' + e.title + (e.note ? ' <span style="opacity:.5">📖</span>' : "") + '</td>' +
-        '<td style="color:var(--muted)">' + (ERAS.filter(function (x) { return x.id === e.era; })[0] || {name: "—"}).name + '</td>' +
+        '<td style="color:var(--muted)">' + (ERAS.filter(function (x) { return x.id === e.era; })[0] || { name: e.book ? "书 · 第 " + e.book.chapter + " 章" : "—" }).name + '</td>' +
         '<td><span class="tag-pill tl-cat-' + e.cat + '">' + e.cat + '</span></td>' +
         '<td><button class="tl-st" data-v="' + (e.status || "点亮") + '">' + (e.status || "点亮") + '</button></td>' +
         '</tr>';
@@ -583,8 +613,8 @@
       var fresh = age <= 4;
       m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past") +
         " k-" + (ev.status || "点亮"));
-      m.dot.setAttribute("r", fresh ? 3 : 1.9);
-      m.glow.setAttribute("r", fresh ? 7 : 4.5);
+      m.dot.setAttribute("transform", fresh ? "scale(1)" : "scale(0.78)");
+      m.glow.setAttribute("r", fresh ? 6.5 : 4.2);
     });
 
     var shown = [];
@@ -726,6 +756,14 @@
     }, 160);
   });
 
+  /* 给筛选按钮也配上符号,这样图例和地图上是同一套记号 */
+  filterWrap.querySelectorAll("button[data-cat]").forEach(function (btn) {
+    var cat = btn.dataset.cat;
+    if (GLYPH[cat]) {
+      btn.insertAdjacentHTML("afterbegin",
+        '<svg class="g" viewBox="-6 -6 12 12" aria-hidden="true"><path d="' + GLYPH[cat] + '"/></svg>');
+    }
+  });
   filterWrap.querySelectorAll("button").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var cat = btn.dataset.cat;
@@ -769,7 +807,7 @@
     zoom: function (z) { Globe.setZoom(z); },
     openCountry: openDossier, closeCountry: closeDossier,
     gather: gather, cityCountry: cityCountry,
-    era: function () { return era; }, eras: ERAS,
+    era: function () { return era; }, eras: ERAS, glyphs: GLYPH,
     drafts: function () { return drafts; }, rows: allRows,
     toggleFlows: function () { flowToggle.click(); },
     globe: Globe
