@@ -67,7 +67,23 @@ body.tl-immersive {
   width: min(88vmin, 720px);
   aspect-ratio: 1;
 }
-#world-map { display: block; width: 100%; height: 100%; overflow: visible; cursor: grab; touch-action: none; }
+#tl-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+#world-map {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%; height: 100%;
+  overflow: visible;
+  cursor: grab;
+  touch-action: none;
+}
 #world-map:active { cursor: grabbing; }
 
 /* 大气层:球体外缘的一圈辉光,只有球才有的东西 */
@@ -81,18 +97,10 @@ body.tl-immersive {
   filter: blur(4px);
 }
 
-.globe-ocean { fill: url(#tlOcean); }
-.globe-land {
-  fill: var(--globe-land);
-  stroke: var(--globe-stroke);
-  stroke-width: 0.35;
-  stroke-linejoin: round;
-  transition: fill 0.2s;
-}
-.globe-land:hover { fill: var(--globe-land-hover); }
 
 /* 冲击波:沿球面扩散的圆环 */
 .tl-wave { fill: none; stroke: currentColor; stroke-width: 0.9; }
+.tl-wave-glow { stroke-width: 3.2; }
 
 /* 玻璃面板通用 */
 .tl-glass {
@@ -287,6 +295,10 @@ body.tl-immersive {
 /* 透明但可命中:SVG 里 fill:none 的图形内部不接受点击,必须显式给 fill */
 .tl-marker .tl-hit { fill: transparent; }
 .tl-marker .tl-dot { fill: currentColor; stroke: #fff; stroke-width: 0.5; }
+/* 辉光:一层大而透明的同色圆。不用 SVG 滤镜——滤镜要对每个移动元素
+   逐帧重新求值,实测三处 bloom 吃掉 11fps */
+.tl-marker .tl-glow { fill: currentColor; opacity: 0.2; }
+.tl-marker.st-past .tl-glow { opacity: 0.12; }
 .tl-marker .tl-halo { fill: none; stroke: currentColor; stroke-width: 0.5; opacity: 0; }
 /* 往事沉成余烬:越往后拖,地球上攒下的光点越多 */
 .tl-marker.st-past { opacity: 0.5; }
@@ -434,4 +446,64 @@ body.tl-immersive {
   .tl-marker.st-now .tl-spark,
   #tl-play.playing { animation: none; }
   .tl-now-item, #tl-play, .tl-panel-toggle svg { transition: none; }
+}
+
+/* ============ 资金流动 ============
+ * 类型不用色相区分:验证器实测红(传染)绿(救助)在红绿色盲下 ΔE 仅 4.9,
+ * 而这两者意思正相反,靠颜色分辨是危险的。统一一个色相,
+ * 类型交给线型(实线/虚线/点线)和面板里的文字。
+ */
+:root { --flow: #0d9488; --flow-glow: rgba(13, 148, 136, 0.45); }
+:root[data-theme="dark"] { --flow: #14b8a6; --flow-glow: rgba(20, 184, 166, 0.5); }
+
+.tl-flow {
+  fill: none;
+  stroke: var(--flow);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+.tl-flow.kind-传染 { stroke-dasharray: none; }
+.tl-flow.kind-外逃 { stroke-dasharray: 4 3; }
+.tl-flow.kind-流动性 { stroke-dasharray: 0.6 3; }
+
+.tl-particle { fill: var(--flow); }
+.tl-flow { filter: none; }
+
+.tl-filter-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--border);
+}
+.tl-flow-pill {
+  color: var(--flow) !important;
+  background: var(--flow-glow) !important;
+}
+.tl-filters button.tl-flow-pill.off { opacity: 0.32; }
+
+/* 面板里的流动条目:类型写成文字,色觉障碍也能读 */
+.tl-flow-item {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--flow);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin: 0 0 9px;
+  background: var(--panel);
+}
+.tl-flow-kind {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--flow);
+  border: 1px solid var(--flow);
+  border-radius: 20px;
+  padding: 1px 8px;
+  margin-right: 7px;
+}
+.tl-flow-item strong { font-size: 14px; }
+.tl-flow-year { color: var(--muted); font-size: 12px; margin-left: 7px; }
+.tl-flow-item p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-particle { display: none; }
 }

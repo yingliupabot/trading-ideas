@@ -18,13 +18,44 @@
   var filterWrap = document.getElementById("tl-filters");
   var markerLayer = document.getElementById("tl-markers");
   var waveLayer = document.getElementById("tl-waves");
+  var flowLayer = document.getElementById("tl-flows");
+  var partLayer = document.getElementById("tl-particles");
+  var flowToggle = document.getElementById("tl-flow-toggle");
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
   var timer = null, waves = [], openIdx = null;
+  var takeWaves, takeFlows, takeParts;
+  var flowsOn = true, flowClock = 0;
+
+  /* 每帧 innerHTML 重建 DOM 会把帧率从 53 压到 23(实测)。
+     改成节点池:建一次,之后只改属性,多余的隐藏起来。 */
+  function pool(layer, tag, store) {
+    return function (n) {
+      while (store.length < n) {
+        var el = document.createElementNS(NS, tag);
+        layer.appendChild(el); store.push(el);
+      }
+      for (var i = 0; i < store.length; i++) {
+        /* 防线:节点若被移出文档(例如误用 innerHTML 清空)就挂回去,
+           否则池会握着一堆脱离文档的引用,静默失效 */
+        if (store[i].parentNode !== layer) layer.appendChild(store[i]);
+        if (i >= n) store[i].setAttribute("display", "none");
+      }
+      return store;
+    };
+  }
+  var wavePool = [], flowPool = [], partPool = [];
+  var FLOW_WINDOW = 4;      /* 一条流动在它发生年份的前后各 4 年内可见 */
+  /* 抬升按角距缩放(见 flowPrep):纽约→雷克雅未克这种短程若和跨洋同高,
+     会拱到北极上方去,看着像脱离了地球。0.05 起步,跨半个地球时到 0.26。 */
+
+  takeWaves = pool(waveLayer, "path", wavePool);
+  takeFlows = pool(flowLayer, "path", flowPool);
+  takeParts = pool(partLayer, "circle", partPool);
 
   Globe.setWorld(WORLD_MAP);
-  Globe.mount(document.getElementById("tl-land"));
+  Globe.mountCanvas(document.getElementById("tl-canvas"));
   var drag = Globe.attachDrag(svg);
 
   /* ---------- 标记:建一次,之后每帧只改坐标 ---------- */
@@ -58,9 +89,13 @@
     hit.setAttribute("r", "7"); hit.setAttribute("class", "tl-hit");
     var halo = document.createElementNS(NS, "circle");
     halo.setAttribute("r", "4"); halo.setAttribute("class", "tl-halo");
+    /* 辉光用一层大而透明的同色圆,不用 feGaussianBlur。
+       滤镜要对每个移动元素逐帧重新求值,实测三处 bloom 吃掉 11fps。 */
+    var glow = document.createElementNS(NS, "circle");
+    glow.setAttribute("class", "tl-glow");
     var dot = document.createElementNS(NS, "circle");
     dot.setAttribute("class", "tl-dot");
-    g.appendChild(hit); g.appendChild(halo); g.appendChild(dot);
+    g.appendChild(hit); g.appendChild(halo); g.appendChild(glow); g.appendChild(dot);
     g.addEventListener("click", function (e) {
       e.stopPropagation();
       if (drag.didDrag()) return;              /* 拖完球别误触发弹窗 */
@@ -68,7 +103,7 @@
       openIdx = i; fillPopup(ev); Globe.rotateTo(c[0], c[1]); paint();
     });
     markerLayer.appendChild(g);
-    return { ev: ev, g: g, dot: dot, halo: halo };
+    return { ev: ev, g: g, dot: dot, halo: halo, glow: glow };
   });
   svg.addEventListener("click", function () { openIdx = null; popup.hidden = true; });
 
@@ -107,9 +142,73 @@
     waves.push({ ev: ev, c: c, th: 0 });
   }
 
+  /* ---------- 资金流动 ----------
+   * 类型不靠色相区分(验证器实测:红绿在色盲下 ΔE 仅 4.9,而"救助"与"传染"
+   * 意思正相反,靠颜色分辨是危险的)。统一用一个色相,类型交给线型和文字。
+   */
+  function activeFlows() {
+    if (!flowsOn) return [];
+    return MONEY_FLOWS.filter(function (f) {
+      return Math.abs(f.year - currentYear) <= FLOW_WINDOW;
+    });
+  }
+  /* 每条流动的端点向量与抬升在整个生命周期里都不变,建一次缓存 */
+  var flowPrep = MONEY_FLOWS.map(function (f) {
+    var a = FLOW_PLACES[f.from], b = FLOW_PLACES[f.to];
+    var A = [a.lng, a.lat], B = [b.lng, b.lat];
+    return { pr: Globe.prepArc(A, B), baseLift: 0.05 + 0.21 * (Globe.angleBetween(A, B) / 180) };
+  });
+  function paintFlows() {
+    var list = activeFlows();
+    if (!list.length) { takeFlows(0); takeParts(0); return; }
+    /* 同一对城市可能有多条流动(纽约→法兰克福既有传染也有流动性注入),
+       端点相同则弧线精确重叠,实线会把点线盖死。按序号加一点抬升错开。 */
+    var dup = {};
+    list.forEach(function (f) { var k = f.from + ">" + f.to; dup[k] = (dup[k] || 0); });
+    var seen = {};
+
+    var arcs = [], parts = [];
+    list.forEach(function (f, fi) {
+      var P = flowPrep[MONEY_FLOWS.indexOf(f)];
+      var k = f.from + ">" + f.to;
+      seen[k] = (seen[k] || 0) + 1;
+      var lift = P.baseLift + (seen[k] - 1) * 0.055;
+      var d = Globe.arcPathFrom(P.pr, { lift: lift, steps: 56 });
+      if (!d) return;
+      /* 离它的年份越远越淡 */
+      var near = 1 - Math.abs(f.year - currentYear) / (FLOW_WINDOW + 1);
+      arcs.push({ kind: f.kind, d: d, o: near });
+      /* 粒子:沿弧线从起点流向终点,三颗错开相位 */
+      for (var k = 0; k < 3; k++) {
+        var t = (flowClock * 0.16 + k / 3 + fi * 0.11) % 1;
+        var q = Globe.arcPointFrom(P.pr, t, lift);
+        if (!q) continue;
+        /* 两端渐隐,粒子像是从城市里长出来又落进去 */
+        var fade = Math.sin(Math.PI * t);
+        parts.push({ x: q[0], y: q[1], r: 1.5 + fade * 0.9, o: near * fade });
+      }
+    });
+    var fp = takeFlows(arcs.length);
+    arcs.forEach(function (a, i) {
+      var el = fp[i];
+      el.removeAttribute("display");
+      el.setAttribute("class", "tl-flow kind-" + a.kind);
+      el.setAttribute("d", a.d);
+      el.setAttribute("opacity", a.o.toFixed(2));
+    });
+    var pp = takeParts(parts.length);
+    parts.forEach(function (c, i) {
+      var el = pp[i];
+      el.removeAttribute("display");
+      el.setAttribute("class", "tl-particle");
+      el.setAttribute("cx", c.x.toFixed(1)); el.setAttribute("cy", c.y.toFixed(1));
+      el.setAttribute("r", c.r.toFixed(2)); el.setAttribute("opacity", c.o.toFixed(2));
+    });
+  }
+
   /* ---------- 每帧重画 ---------- */
   function paint() {
-    Globe.renderLand();
+    Globe.renderCanvas();
 
     marks.forEach(function (m) {
       var ev = m.ev;
@@ -124,18 +223,29 @@
       var fresh = age <= 4;
       m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past"));
       m.dot.setAttribute("r", fresh ? 3 : 1.9);
+      m.glow.setAttribute("r", fresh ? 7 : 4.5);
     });
 
-    var out = [];
+    var shown = [];
     waves.forEach(function (w) {
       var d = Globe.depth(w.c[0], w.c[1]);
       if (d <= 0.12) return;                 /* 震中贴近地平线:圆环被压成细缝,不画 */
       var fade = Math.min(1, (d - 0.12) / 0.3);
-      var life = Math.max(0, 1 - w.th / 100);
-      out.push('<path class="tl-wave cat-' + w.ev.cat + '" d="' + Globe.ringPath(w.c[0], w.c[1], w.th) +
-               '" opacity="' + (life * fade).toFixed(2) + '"/>');
+      shown.push({ w: w, o: Math.max(0, 1 - w.th / 100) * fade });
     });
-    waveLayer.innerHTML = out.join("");
+    /* 一粗一细两条:粗的当辉光,细的当核心。比 feGaussianBlur 便宜得多 */
+    var wp = takeWaves(shown.length * 2);
+    shown.forEach(function (it, i) {
+      var d = Globe.ringPath(it.w.c[0], it.w.c[1], it.w.th);
+      var lo = wp[i * 2], hi = wp[i * 2 + 1];
+      lo.removeAttribute("display");
+      lo.setAttribute("class", "tl-wave tl-wave-glow cat-" + it.w.ev.cat);
+      lo.setAttribute("d", d); lo.setAttribute("opacity", (it.o * 0.32).toFixed(2));
+      hi.removeAttribute("display");
+      hi.setAttribute("class", "tl-wave cat-" + it.w.ev.cat);
+      hi.setAttribute("d", d); hi.setAttribute("opacity", it.o.toFixed(2));
+    });
+    paintFlows();
 
     placePopup();
   }
@@ -149,8 +259,18 @@
     var todays = TIMELINE_EVENTS.filter(function (ev) {
       return ev.year === currentYear && activeCats[ev.cat];
     });
-    if (!todays.length) {
+    var flowHtml = activeFlows().map(function (f) {
+      return '<div class="tl-flow-item kind-' + f.kind + '">' +
+        '<span class="tl-flow-kind">' + f.kind + '</span>' +
+        '<strong>' + FLOW_PLACES[f.from].name + ' → ' + FLOW_PLACES[f.to].name + '</strong>' +
+        '<span class="tl-flow-year">' + f.year + '</span>' +
+        '<p>' + f.note + '</p></div>';
+    }).join("");
+
+    if (!todays.length && !flowHtml) {
       nowList.innerHTML = '<p class="tl-empty">这一年，世界安静得像深呼吸——拖动时间轴，去有故事的年份看看。</p>';
+    } else if (!todays.length) {
+      nowList.innerHTML = flowHtml;
     } else {
       nowList.innerHTML = todays.map(function (ev) {
         var i = TIMELINE_EVENTS.indexOf(ev);
@@ -160,7 +280,7 @@
           '<strong>' + ev.title + '</strong>' +
           '<span class="tl-now-place">' + ev.city + '，' + ev.country + '</span>' +
           '<p>' + ev.summary + '</p>' + link + '</div>';
-      }).join("");
+      }).join("") + flowHtml;
       nowList.querySelectorAll(".tl-now-item").forEach(function (el) {
         el.addEventListener("click", function () {
           var i = +el.dataset.idx, ev = TIMELINE_EVENTS[i];
@@ -194,6 +314,7 @@
   function loop(now) {
     var dt = Math.min(3, (now - last) / 16.67); last = now;
     Globe.step(dt);
+    if (!CALM) flowClock += dt / 60;
     if (!CALM) {
       for (var i = waves.length - 1; i >= 0; i--) {
         waves[i].th += 0.85 * dt;
@@ -231,6 +352,15 @@
     });
   });
 
+  if (flowToggle) {
+    flowToggle.addEventListener("click", function () {
+      flowsOn = !flowsOn;
+      flowToggle.setAttribute("aria-pressed", flowsOn ? "true" : "false");
+      flowToggle.classList.toggle("off", !flowsOn);
+      render();
+    });
+  }
+
   render();
   requestAnimationFrame(loop);
 
@@ -240,6 +370,8 @@
     spin: function (d) { Globe.rotation = d; },
     year: function () { return currentYear; },
     waves: function () { return waves; },
+    flows: function () { return activeFlows(); },
+    toggleFlows: function () { flowToggle.click(); },
     globe: Globe
   };
 })();
