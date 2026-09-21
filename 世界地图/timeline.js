@@ -24,11 +24,12 @@
   var linkLayer = document.getElementById("tl-links");
   var linkToggle = document.getElementById("tl-link-toggle");
   var atmos = document.querySelector(".tl-atmos");
+  var rhumbLayer = document.getElementById("tl-rhumbs");
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
   var timer = null, waves = [], openIdx = null;
-  var takeWaves, takeFlows, takeParts, takeLinks;
+  var takeWaves, takeFlows, takeParts, takeLinks, takeRhumbs;
   var flowsOn = true, flowClock = 0, linksOn = true;
 
   /* 每帧 innerHTML 重建 DOM 会把帧率从 53 压到 23(实测)。
@@ -48,7 +49,7 @@
       return store;
     };
   }
-  var wavePool = [], flowPool = [], partPool = [], linkPool = [];
+  var wavePool = [], flowPool = [], partPool = [], linkPool = [], rhumbPool = [];
   var FLOW_WINDOW = 4;      /* 一条流动在它发生年份的前后各 4 年内可见 */
   /* 抬升按角距缩放(见 flowPrep):纽约→雷克雅未克这种短程若和跨洋同高,
      会拱到北极上方去,看着像脱离了地球。0.05 起步,跨半个地球时到 0.26。 */
@@ -57,6 +58,7 @@
   takeFlows = pool(flowLayer, "path", flowPool);
   takeParts = pool(partLayer, "circle", partPool);
   takeLinks = pool(linkLayer, "path", linkPool);
+  takeRhumbs = pool(rhumbLayer, "path", rhumbPool);
 
   Globe.setWorld(WORLD_MAP);
   Globe.mountCanvas(document.getElementById("tl-canvas"));
@@ -210,6 +212,39 @@
     });
   }
 
+  /* ---------- 罗经线 ----------
+   * 波特兰海图最标志性的东西:从罗盘中心放射出去的航向线。
+   * 在球面上它们就是过同一点的大圆——正好复用 arcPath 的几何。
+   */
+  var RHUMB_HUBS = [
+    { lng: -30, lat: 30 },   /* 北大西洋:1720-2008 的主战场 */
+    { lng: 100, lat: 10 }    /* 东印度洋:香料与东印度公司的旧航路 */
+  ];
+  var rhumbPrep = [];
+  RHUMB_HUBS.forEach(function (h, hi) {
+    for (var a = 0; a < 360; a += 22.5) {              /* 十六个罗经方位 */
+      var b = a * Math.PI / 180;
+      /* 从中心沿方位角走 78°,取终点,两点定一条大圆 */
+      var t = 78 * Math.PI / 180, p0 = h.lat * Math.PI / 180, l0 = h.lng * Math.PI / 180;
+      var lat = Math.asin(Math.sin(p0) * Math.cos(t) + Math.cos(p0) * Math.sin(t) * Math.cos(b));
+      var lng = l0 + Math.atan2(Math.sin(b) * Math.sin(t) * Math.cos(p0), Math.cos(t) - Math.sin(p0) * Math.sin(lat));
+      var A = [h.lng, h.lat], B = [lng * 180 / Math.PI, lat * 180 / Math.PI];
+      rhumbPrep.push({ pr: Globe.prepArc(A, B), major: (a % 90 === 0) && hi === 0 });
+    }
+  });
+  function paintRhumbs() {
+    var rp = takeRhumbs(rhumbPrep.length), n = 0;
+    rhumbPrep.forEach(function (R) {
+      var d = Globe.arcPathFrom(R.pr, { lift: 0, steps: 26 });
+      if (!d) return;
+      var el = rp[n++];
+      el.removeAttribute("display");
+      el.setAttribute("class", "tl-rhumb" + (R.major ? " major" : ""));
+      el.setAttribute("d", d);
+    });
+    for (var i = n; i < rp.length; i++) rp[i].setAttribute("display", "none");
+  }
+
   /* ---------- 因果链 ----------
    * 视觉上刻意用中性色:因果是一种"关系",不是又一个并列的分类。
    * 再加第七个色相只会把已经验证过的六色体系挤坏。
@@ -288,6 +323,7 @@
       hi.setAttribute("class", "tl-wave cat-" + it.w.ev.cat);
       hi.setAttribute("d", d); hi.setAttribute("opacity", it.o.toFixed(2));
     });
+    paintRhumbs();
     paintLinks();
     paintFlows();
     /* 放大到贴近地表时,球缘的大气层已经在视口外,留着只会是一道假边 */

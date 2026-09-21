@@ -1,0 +1,146 @@
+/* 世界历史时间轴 · 古航海图皮肤
+ *
+ * 这一版的语汇是波特兰海图(portolan chart):牛皮纸、墨线、罗经线、小船。
+ * 不用玻璃、不用辉光、不用霓虹——那是 fintech dashboard 的语汇,
+ * 和"绘本连载"的底子打架。
+ */
+
+/* ============ 纸 ============ */
+:root {
+  --paper-1: #e9dcc0;
+  --paper-2: #ddcaa6;
+  --ink: #3b2e21;
+  --ink-soft: #6b5842;
+  --ink-faint: rgba(59, 46, 33, 0.28);
+  --rule: rgba(90, 70, 48, 0.32);
+
+  /* 海是纸本身(略深),陆是浅一档的米色加墨线——波特兰图的做法 */
+  --globe-sea-1: #d8c49c;
+  --globe-sea-2: #cbb489;
+  --globe-sea-3: #b99f74;
+  --globe-land: #f0e6cc;
+  --globe-land-hover: #f7f0dd;
+  --globe-stroke: #6b5842;
+
+  --space-1: #e4d4b4;
+  --space-2: #d9c49e;
+  --atmos: rgba(120, 95, 60, 0.22);
+  --stage-glow: rgba(255, 248, 230, 0.35);
+  --stage-vignette: rgba(120, 92, 52, 0.30);
+
+  --bg: var(--paper-1);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --panel: rgba(247, 240, 222, 0.92);
+  --border: var(--rule);
+  --accent: #8c4a2f;              /* 朱砂 */
+  --shadow: 0 6px 20px rgba(80, 60, 35, 0.22);
+  --card-glow: rgba(140, 74, 47, 0.25);
+}
+:root[data-theme="dark"] {
+  /* 夜里的海图:烛光下的旧纸 */
+  --paper-1: #2b2318;
+  --paper-2: #1f1a12;
+  --ink: #e8dcc0;
+  --ink-soft: #b7a487;
+  --ink-faint: rgba(232, 220, 192, 0.25);
+  --rule: rgba(190, 168, 130, 0.28);
+
+  --globe-sea-1: #3a3020;
+  --globe-sea-2: #2b2317;
+  --globe-sea-3: #1d1810;
+  --globe-land: #5a4b34;
+  --globe-land-hover: #6d5c41;
+  --globe-stroke: #cbb489;
+
+  --space-1: #241d14;
+  --space-2: #17120c;
+  --atmos: rgba(203, 180, 137, 0.20);
+  --stage-glow: rgba(203, 180, 137, 0.07);
+  --stage-vignette: rgba(0, 0, 0, 0.55);
+
+  --bg: var(--paper-1);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --panel: rgba(43, 35, 24, 0.94);
+  --border: var(--rule);
+  --accent: #d2795a;
+  --shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
+  --card-glow: rgba(210, 121, 90, 0.22);
+}
+
+/* 纸的纤维:feTurbulence 作为静态背景图,浏览器只栅格化一次,不进每帧开销 */
+.tl-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.20 0 0 0 0.22 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] .tl-stage::before { mix-blend-mode: screen; opacity: 0.22; }
+
+/* ============ 字 ============ */
+/* 衬线体:宋体/楷体在中文里天然带着旧纸的年代感,而且零加载成本 */
+body.tl-immersive,
+.tl-heading h1, .tl-panel-toggle h3, .tl-now-item strong,
+.tl-flow-item strong, .tl-link-item strong, .tl-popup h4 {
+  font-family: Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+}
+.tl-year-badge span {
+  font-family: Georgia, "Songti SC", serif;
+  font-weight: 700;
+  letter-spacing: 2px;
+  /* 去掉渐变文字,改成墨色 */
+  background: none;
+  -webkit-text-fill-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ============ 小船光标 ============ */
+#world-map {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%233b2e21' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M18 4 L18 22' /%3E%3Cpath d='M18 6 L27 15 L18 15 Z' fill='%23f0e6cc'/%3E%3Cpath d='M17 9 L10 16 L17 16 Z' fill='%23f0e6cc'/%3E%3Cpath d='M7 22 L29 22 L25 28 L11 28 Z' fill='%23d8c49c'/%3E%3C/g%3E%3C/svg%3E") 18 22, grab;
+}
+#world-map:active {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%238c4a2f' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M18 4 L18 22'/%3E%3Cpath d='M18 6 L27 15 L18 15 Z' fill='%23f7f0dd'/%3E%3Cpath d='M17 9 L10 16 L17 16 Z' fill='%23f7f0dd'/%3E%3Cpath d='M7 22 L29 22 L25 28 L11 28 Z' fill='%23e9dcc0'/%3E%3C/g%3E%3C/svg%3E") 18 22, grabbing;
+}
+
+/* ============ 纸片面板:不要玻璃 ============ */
+.tl-topbar, .tl-back, .tl-heading, .tl-topbar-actions, .tl-panel, .tl-dock {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 3px !important;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(255, 250, 235, 0.35) !important;
+}
+.tl-topbar { background: none !important; border: none !important; box-shadow: none !important; }
+
+/* 纸边微微翘起。
+   注意:这里不能写 position:relative —— .tl-panel/.tl-dock 是 position:fixed,
+   relative 会把它们打回普通文档流;而 fixed 本身就是 ::after 的定位基准。 */
+.tl-panel::after, .tl-dock::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  border: 1px solid var(--ink-faint);
+  border-radius: 2px;
+}
+
+/* ============ 罗经线 ============ */
+.tl-rhumb {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 0.3;
+}
+.tl-rhumb.major { stroke: var(--accent); stroke-width: 0.45; opacity: 0.6; }
+
+/* ============ 国家点选 ============ */
+.tl-country-label {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
