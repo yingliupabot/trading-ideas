@@ -4,7 +4,35 @@
 (function () {
   "use strict";
 
-  var MIN_YEAR = 1600, MAX_YEAR = 2050;
+  /* 词条.js 由 scripts/build-index.js 从 词条/<id>/meta.json 生成,是唯一真相。
+     下面把它摊平成渲染代码原来吃的形状——这样既只剩一份清单,
+     又不用把已经测过的渲染路径全部重写一遍。 */
+  var TIMELINE_EVENTS = ENTRIES.map(function (e) {
+    return {
+      id: e.id, year: e.year, era: e.era, status: e.status || "点亮",
+      city: e.place.city, country: e.place.country,
+      lat: e.place.lat, lng: e.place.lng,
+      cat: e.cat, title: e.title, summary: e.summary, chapter: e.note
+    };
+  });
+  var byId = {};
+  TIMELINE_EVENTS.forEach(function (e) { byId[e.id] = e; });
+
+  /* 因果链现在长在词条自己身上,这里收成渲染代码用的年份索引形式 */
+  var CAUSAL_LINKS = [];
+  ENTRIES.forEach(function (e) {
+    (e.links || []).forEach(function (l) {
+      if (l.type !== "因果" || !byId[l.to]) return;
+      CAUSAL_LINKS.push({ from: e.year, to: byId[l.to].year, strength: l.strength, note: l.note });
+    });
+  });
+
+  /* 年份范围随时代走。2850 年拉成一根滑块,现代会被压成几个像素,
+     所以先选时代、再在时代内细调。
+     era 必须初始化为 null:否则首屏那次 applyEra 会被"同一个时代就跳过"挡掉,
+     data-era、时代带高亮、时代说明全都设不上。 */
+  var _e0 = eraOf(1720);
+  var era = null, MIN_YEAR = _e0.from, MAX_YEAR = _e0.to;
   var NS = "http://www.w3.org/2000/svg";
   var CALM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -25,6 +53,9 @@
   var linkToggle = document.getElementById("tl-link-toggle");
   var atmos = document.querySelector(".tl-atmos");
   var rhumbLayer = document.getElementById("tl-rhumbs");
+  var eraBand = document.getElementById("tl-eras");
+  var eraNote = document.getElementById("tl-era-note");
+  var ticks = document.getElementById("tl-ticks");
   var dossier = document.getElementById("tl-dossier");
   var dossierSheet = document.getElementById("tl-dossier-sheet");
 
@@ -214,6 +245,150 @@
       el.setAttribute("cx", c.x.toFixed(1)); el.setAttribute("cy", c.y.toFixed(1));
       el.setAttribute("r", c.r.toFixed(2)); el.setAttribute("opacity", c.o.toFixed(2));
     });
+  }
+
+  /* ---------- 词条管理 ----------
+   * 静态站没有后端。真正写入只有两条路:把 GitHub token 放进浏览器
+   * (那个 token 能改你的整个仓库,放前端是真风险),或者加后端(就不 self-contained 了)。
+   * 所以这里是"页内编辑 + 导出":草稿存 localStorage,导出给你粘回文件。
+   */
+  var DRAFT_KEY = "ti-entry-drafts";
+  var drafts = (function () {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { return {}; }
+  })();
+  function saveDrafts() {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) {}
+  }
+  function effective(id) {
+    var base = ENTRIES.filter(function (e) { return e.id === id; })[0];
+    return Object.assign({}, base, drafts[id] || {});
+  }
+  function allRows() {
+    var rows = ENTRIES.map(function (e) { return effective(e.id); });
+    /* 草稿里新增的词条在 ENTRIES 里还没有 */
+    Object.keys(drafts).forEach(function (id) {
+      if (!ENTRIES.some(function (e) { return e.id === id; })) rows.push(drafts[id]);
+    });
+    return rows.sort(function (a, b) { return a.year - b.year; });
+  }
+
+  var STATUSES = ["点亮", "在读", "想读"];
+  var manage = document.getElementById("tl-manage");
+  var tbody = document.getElementById("tl-tbl-body");
+
+  function renderTable() {
+    tbody.innerHTML = allRows().map(function (e) {
+      var dirty = !!drafts[e.id];
+      return '<tr class="' + (dirty ? "dirty" : "") + '" data-id="' + e.id + '">' +
+        '<td class="y">' + fmtYear(e.year) + '</td>' +
+        '<td>' + e.title + (e.note ? ' <span style="opacity:.5">📖</span>' : "") + '</td>' +
+        '<td style="color:var(--muted)">' + (ERAS.filter(function (x) { return x.id === e.era; })[0] || {name: "—"}).name + '</td>' +
+        '<td><span class="tag-pill tl-cat-' + e.cat + '">' + e.cat + '</span></td>' +
+        '<td><button class="tl-st" data-v="' + (e.status || "点亮") + '">' + (e.status || "点亮") + '</button></td>' +
+        '</tr>';
+    }).join("");
+    tbody.querySelectorAll(".tl-st").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.closest("tr").dataset.id;
+        var cur = btn.dataset.v;
+        var next = STATUSES[(STATUSES.indexOf(cur) + 1) % STATUSES.length];
+        drafts[id] = Object.assign({}, effective(id), { status: next });
+        saveDrafts(); renderTable(); refreshStatuses();
+      });
+    });
+    var n = Object.keys(drafts).length;
+    document.getElementById("tl-manage-hint").innerHTML = n
+      ? "有 <b>" + n + "</b> 处未导出的改动（底色标出来了）。草稿存在浏览器里，换台机器就没了——导出粘回文件才算数。"
+      : "还没有改动。";
+  }
+  /* 草稿里的状态要立刻反映到地球上,否则改了看不见 */
+  function refreshStatuses() {
+    marks.forEach(function (m) {
+      var d = drafts[m.ev.id];
+      if (d && d.status) m.ev.status = d.status;
+    });
+  }
+
+  document.getElementById("tl-manage-open").addEventListener("click", function () {
+    renderTable(); manage.hidden = false;
+  });
+  document.getElementById("tl-manage-close").addEventListener("click", function () { manage.hidden = true; });
+  manage.addEventListener("click", function (e) { if (e.target === manage) manage.hidden = true; });
+
+  document.getElementById("tl-new-toggle").addEventListener("click", function () {
+    var box = document.getElementById("tl-new");
+    box.classList.toggle("on");
+    document.getElementById("tl-new-add").style.display = box.classList.contains("on") ? "" : "none";
+  });
+  document.getElementById("tl-new-add").addEventListener("click", function () {
+    var v = function (id) { return document.getElementById(id).value.trim(); };
+    var title = v("nf-title"), year = parseInt(v("nf-year"), 10);
+    if (!title || isNaN(year)) { alert("标题和年份是必填的。"); return; }
+    var id = year + "-" + title;
+    drafts[id] = {
+      id: id, title: title, year: year, era: eraOf(year).id,
+      place: { city: v("nf-city"), country: v("nf-country"),
+               lat: parseFloat(v("nf-lat")) || 0, lng: parseFloat(v("nf-lng")) || 0 },
+      cat: v("nf-cat") || "经济",
+      status: v("nf-status") || "想读",
+      summary: v("nf-summary"), note: null, links: []
+    };
+    saveDrafts(); renderTable();
+    ["nf-title","nf-year","nf-city","nf-country","nf-lat","nf-lng","nf-summary"].forEach(function (k) {
+      document.getElementById(k).value = "";
+    });
+  });
+  document.getElementById("tl-export").addEventListener("click", function () {
+    var out = document.getElementById("tl-export-out");
+    var ids = Object.keys(drafts);
+    if (!ids.length) { out.hidden = false; out.textContent = "没有改动。"; return; }
+    out.hidden = false;
+    out.textContent = ids.map(function (id) {
+      var e = Object.assign({}, drafts[id]);
+      delete e.id;                       /* id 就是目录名,不重复写进文件 */
+      return "# 词条/" + id + "/meta.json\n" + JSON.stringify(e, null, 2);
+    }).join("\n\n");
+  });
+  document.getElementById("tl-reset").addEventListener("click", function () {
+    if (!confirm("丢弃所有未导出的草稿？")) return;
+    drafts = {}; saveDrafts(); renderTable();
+    document.getElementById("tl-export-out").hidden = true;
+  });
+
+  /* ---------- 时代 ---------- */
+  function eventsIn(e) {
+    return TIMELINE_EVENTS.filter(function (ev) { return ev.year >= e.from && ev.year < e.to; });
+  }
+  function buildEraBand() {
+    eraBand.innerHTML = ERAS.map(function (e) {
+      var n = eventsIn(e).length;
+      return '<button class="tl-era' + (n ? "" : " empty") + '" data-era="' + e.id + '">' +
+        '<span class="n">' + e.name + '</span>' +
+        '<span class="c">' + (n ? n + " 处" : "空白") + '</span></button>';
+    }).join("");
+    eraBand.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var e = ERAS.filter(function (x) { return x.id === b.dataset.era; })[0];
+        var evs = eventsIn(e);
+        /* 有内容就落到第一件事上,空白时代落到中点 */
+        setYear(evs.length ? evs[0].year : Math.round((e.from + e.to) / 2), false);
+      });
+    });
+  }
+  /* 刻度按当前时代重算,并处理公元前的负年份 */
+  function fmtYear(y) { return y < 0 ? "前" + (-y) : String(y); }
+  function applyEra(e) {
+    if (era && era.id === e.id) return;
+    era = e; MIN_YEAR = e.from; MAX_YEAR = e.to;
+    document.documentElement.setAttribute("data-era", e.id);
+    slider.min = e.from; slider.max = e.to;
+    eraNote.textContent = e.note;
+    eraBand.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.era === e.id);
+    });
+    var span = e.to - e.from, out = [];
+    for (var i = 0; i <= 5; i++) out.push("<span>" + fmtYear(Math.round(e.from + span * i / 5)) + "</span>");
+    ticks.innerHTML = out.join("");
   }
 
   /* ---------- 国家卷宗 ----------
@@ -406,7 +581,8 @@
       /* 刚发生的亮,年代久远的沉成余烬——拖到 2050 时整颗星球布满历史的光点 */
       var age = currentYear - ev.year;
       var fresh = age <= 4;
-      m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past"));
+      m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past") +
+        " k-" + (ev.status || "点亮"));
       m.dot.setAttribute("r", fresh ? 3 : 1.9);
       m.glow.setAttribute("r", fresh ? 7 : 4.5);
     });
@@ -445,8 +621,9 @@
 
   /* ---------- 年份 ---------- */
   function render() {
-    yearBadge.textContent = currentYear;
-    nowYear.textContent = currentYear;
+    applyEra(eraOf(currentYear));
+    yearBadge.textContent = fmtYear(currentYear);
+    nowYear.textContent = fmtYear(currentYear);
     slider.value = currentYear;
 
     var todays = TIMELINE_EVENTS.filter(function (ev) {
@@ -538,10 +715,12 @@
   }
   playBtn.addEventListener("click", function () {
     if (timer) { stopPlay(); return; }
-    if (currentYear >= MAX_YEAR) { currentYear = MIN_YEAR; waves.length = 0; openIdx = null; }
+    if (currentYear >= MAX_YEAR - 1) { currentYear = MIN_YEAR; waves.length = 0; openIdx = null; }
     playBtn.textContent = "⏸"; playBtn.classList.add("playing");
     timer = setInterval(function () {
-      var y = currentYear + 2;
+      /* 步长按时代跨度缩放:中世纪近千年,两年一步要走五百下 */
+      var step = Math.max(1, Math.round((MAX_YEAR - MIN_YEAR) / 180));
+      var y = currentYear + step;
       if (y >= MAX_YEAR) { setYear(MAX_YEAR, true); stopPlay(); return; }
       setYear(y, true);
     }, 160);
@@ -574,6 +753,8 @@
     });
   }
 
+  buildEraBand();
+  refreshStatuses();
   render();
   requestAnimationFrame(loop);
 
@@ -588,6 +769,8 @@
     zoom: function (z) { Globe.setZoom(z); },
     openCountry: openDossier, closeCountry: closeDossier,
     gather: gather, cityCountry: cityCountry,
+    era: function () { return era; }, eras: ERAS,
+    drafts: function () { return drafts; }, rows: allRows,
     toggleFlows: function () { flowToggle.click(); },
     globe: Globe
   };
