@@ -1,0 +1,354 @@
+/* 世界历史时间轴 · 古航海图皮肤
+ *
+ * 这一版的语汇是波特兰海图(portolan chart):牛皮纸、墨线、罗经线、小船。
+ * 不用玻璃、不用辉光、不用霓虹——那是 fintech dashboard 的语汇,
+ * 和"绘本连载"的底子打架。
+ */
+
+/* ============ 纸 ============ */
+:root {
+  --paper-1: #e9dcc0;
+  --paper-2: #ddcaa6;
+  --ink: #3b2e21;
+  --ink-soft: #6b5842;
+  --ink-faint: rgba(59, 46, 33, 0.28);
+  --rule: rgba(90, 70, 48, 0.32);
+
+  /* 海是纸本身(略深),陆是浅一档的米色加墨线——波特兰图的做法 */
+  --globe-sea-1: #d8c49c;
+  --globe-sea-2: #cbb489;
+  --globe-sea-3: #b99f74;
+  --globe-land: #f0e6cc;
+  --globe-land-hover: #f7f0dd;
+  --globe-stroke: #6b5842;
+
+  --space-1: #e4d4b4;
+  --space-2: #d9c49e;
+  --atmos: rgba(120, 95, 60, 0.22);
+  --stage-glow: rgba(255, 248, 230, 0.35);
+  --stage-vignette: rgba(120, 92, 52, 0.30);
+
+  --bg: var(--paper-1);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --panel: rgba(247, 240, 222, 0.92);
+  --border: var(--rule);
+  --accent: #8c4a2f;              /* 朱砂 */
+  --shadow: 0 6px 20px rgba(80, 60, 35, 0.22);
+  --card-glow: rgba(140, 74, 47, 0.25);
+}
+:root[data-theme="dark"] {
+  /* 夜里的海图:烛光下的旧纸 */
+  --paper-1: #2b2318;
+  --paper-2: #1f1a12;
+  --ink: #e8dcc0;
+  --ink-soft: #b7a487;
+  --ink-faint: rgba(232, 220, 192, 0.25);
+  --rule: rgba(190, 168, 130, 0.28);
+
+  --globe-sea-1: #3a3020;
+  --globe-sea-2: #2b2317;
+  --globe-sea-3: #1d1810;
+  --globe-land: #5a4b34;
+  --globe-land-hover: #6d5c41;
+  --globe-stroke: #cbb489;
+
+  --space-1: #241d14;
+  --space-2: #17120c;
+  --atmos: rgba(203, 180, 137, 0.20);
+  --stage-glow: rgba(203, 180, 137, 0.07);
+  --stage-vignette: rgba(0, 0, 0, 0.55);
+
+  --bg: var(--paper-1);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --panel: rgba(43, 35, 24, 0.94);
+  --border: var(--rule);
+  --accent: #d2795a;
+  --shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
+  --card-glow: rgba(210, 121, 90, 0.22);
+}
+
+/* 纸的纤维:feTurbulence 作为静态背景图,浏览器只栅格化一次,不进每帧开销 */
+.tl-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.33 0 0 0 0 0.20 0 0 0 0.22 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] .tl-stage::before { mix-blend-mode: screen; opacity: 0.22; }
+
+/* ============ 字 ============ */
+/* 衬线体:宋体/楷体在中文里天然带着旧纸的年代感,而且零加载成本 */
+body.tl-immersive,
+.tl-heading h1, .tl-panel-toggle h3, .tl-now-item strong,
+.tl-flow-item strong, .tl-link-item strong, .tl-popup h4 {
+  font-family: Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+}
+.tl-year-badge span {
+  font-family: Georgia, "Songti SC", serif;
+  font-weight: 700;
+  letter-spacing: 2px;
+  /* 去掉渐变文字,改成墨色 */
+  background: none;
+  -webkit-text-fill-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ============ 小船光标 ============ */
+#world-map {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%233b2e21' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M18 4 L18 22' /%3E%3Cpath d='M18 6 L27 15 L18 15 Z' fill='%23f0e6cc'/%3E%3Cpath d='M17 9 L10 16 L17 16 Z' fill='%23f0e6cc'/%3E%3Cpath d='M7 22 L29 22 L25 28 L11 28 Z' fill='%23d8c49c'/%3E%3C/g%3E%3C/svg%3E") 18 22, grab;
+}
+#world-map:active {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%238c4a2f' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M18 4 L18 22'/%3E%3Cpath d='M18 6 L27 15 L18 15 Z' fill='%23f7f0dd'/%3E%3Cpath d='M17 9 L10 16 L17 16 Z' fill='%23f7f0dd'/%3E%3Cpath d='M7 22 L29 22 L25 28 L11 28 Z' fill='%23e9dcc0'/%3E%3C/g%3E%3C/svg%3E") 18 22, grabbing;
+}
+
+/* ============ 纸片面板:不要玻璃 ============ */
+.tl-topbar, .tl-back, .tl-heading, .tl-topbar-actions, .tl-panel, .tl-dock {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 3px !important;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(255, 250, 235, 0.35) !important;
+}
+.tl-topbar { background: none !important; border: none !important; box-shadow: none !important; }
+
+/* 纸边微微翘起。
+   注意:这里不能写 position:relative —— .tl-panel/.tl-dock 是 position:fixed,
+   relative 会把它们打回普通文档流;而 fixed 本身就是 ::after 的定位基准。 */
+.tl-panel::after, .tl-dock::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  border: 1px solid var(--ink-faint);
+  border-radius: 2px;
+}
+
+/* ============ 罗经线 ============ */
+.tl-rhumb {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 0.3;
+}
+.tl-rhumb.major { stroke: var(--accent); stroke-width: 0.45; opacity: 0.6; }
+
+/* ============ 国家点选 ============ */
+.tl-country-label {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+/* ============ 国家卷宗:从顶边展开的牛皮纸 ============ */
+/* 关键:CSS 的 display 会压过 hidden 属性自带的 display:none。
+   不写这行,这块全屏遮罩在"隐藏"时仍然拦截全页点击,地球直接点不动。 */
+.tl-dossier[hidden], .tl-manage[hidden] { display: none !important; }
+
+.tl-dossier {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 88px 16px 24px;
+  background: rgba(60, 45, 25, 0.28);
+  overflow-y: auto;
+}
+:root[data-theme="dark"] .tl-dossier { background: rgba(0, 0, 0, 0.5); }
+
+.tl-dossier-sheet {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 26px 30px 30px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  /* 从顶边折下来。perspective 给在自己身上,父层是 grid 不方便设 */
+  transform: perspective(1400px) rotateX(-88deg);
+  transform-origin: top center;
+  opacity: 0;
+  transition: transform 0.42s cubic-bezier(.22,.9,.3,1), opacity 0.22s ease-out;
+}
+.tl-dossier-sheet.open { transform: perspective(1400px) rotateX(0deg); opacity: 1; }
+
+/* 纸的折痕:横过中间的一道浅印,和边上微微的阴影 */
+.tl-dossier-sheet::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 46%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-faint) 12%, var(--ink-faint) 88%, transparent);
+  pointer-events: none;
+}
+.tl-dossier-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--ink-faint);
+  pointer-events: none;
+}
+
+.tl-dossier-close {
+  position: absolute;
+  top: 10px; right: 12px;
+  width: 30px; height: 30px;
+  border: 1px solid var(--rule);
+  background: none;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.tl-dossier-close:hover { color: var(--accent); border-color: var(--accent); }
+
+.tl-dossier-head { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+/* 封缄印章:54 个顶点当大地图不能看,缩到 60px 正好,还带点木刻的粗粝 */
+.tl-seal { width: 62px; height: 62px; flex-shrink: 0; }
+.tl-seal path { fill: var(--globe-land); stroke: var(--ink); stroke-width: 1.1; stroke-linejoin: round; }
+.tl-dossier-title h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 3px;
+  font-family: Georgia, "Songti SC", serif;
+}
+.tl-dossier-title p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); letter-spacing: 1px; }
+
+.tl-dossier-body { margin-top: 18px; }
+.tl-dossier-body h3 {
+  margin: 22px 0 10px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 5px;
+}
+.tl-dossier-body h3:first-child { margin-top: 0; }
+
+.tl-doss-row { padding: 9px 0; border-bottom: 1px dotted var(--ink-faint); }
+.tl-doss-row:last-child { border-bottom: none; }
+.tl-doss-year {
+  display: inline-block;
+  min-width: 46px;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+.tl-doss-row strong { font-size: 14.5px; margin-right: 8px; }
+.tl-doss-row p { margin: 5px 0 0 46px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+.tl-doss-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 2;
+  padding: 26px 0 12px;
+}
+.tl-doss-empty span { color: var(--ink-faint); font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-dossier-sheet { transition: opacity 0.2s; transform: none !important; }
+}
+@media (max-width: 760px) {
+  .tl-dossier { padding: 74px 12px 20px; }
+  .tl-dossier-sheet { padding: 22px 18px 24px; }
+  .tl-dossier-title h2 { font-size: 22px; }
+}
+
+/* ============ 词条三态 ============
+ * 知识图谱最重要的信息是空洞在哪。实心=点亮,空心=在读,虚线=想读。
+ * 靠形状不靠颜色,和分类色互不干扰。
+ */
+.tl-marker.k-在读 .tl-dot { fill: none; stroke: currentColor; stroke-width: 1.1; }
+.tl-marker.k-在读 .tl-glow { opacity: 0.07; }
+.tl-marker.k-想读 { opacity: 0.55; }
+.tl-marker.k-想读 .tl-dot { fill: none; stroke: currentColor; stroke-width: 0.8; stroke-dasharray: 1.4 1.4; }
+.tl-marker.k-想读 .tl-glow { display: none; }
+
+/* ============ 词条管理 ============ */
+.tl-manage {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(60, 45, 25, 0.32);
+  overflow-y: auto;
+  padding: 40px 16px;
+  display: grid; place-items: start center;
+}
+:root[data-theme="dark"] .tl-manage { background: rgba(0, 0, 0, 0.55); }
+.tl-manage-sheet {
+  width: min(760px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  padding: 24px 26px 28px;
+  position: relative;
+}
+.tl-manage-sheet::after {
+  content: ""; position: absolute; inset: 5px;
+  border: 1px solid var(--ink-faint); pointer-events: none;
+}
+.tl-manage h2 {
+  margin: 0 0 4px; font-size: 22px; letter-spacing: 3px;
+  font-family: Georgia, "Songti SC", serif;
+}
+.tl-manage .sub { margin: 0 0 18px; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+
+.tl-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tl-tbl th {
+  text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: 1.5px;
+  color: var(--ink-soft); border-bottom: 1px solid var(--rule); padding: 6px 6px;
+}
+.tl-tbl td { padding: 7px 6px; border-bottom: 1px dotted var(--ink-faint); vertical-align: middle; }
+.tl-tbl .y { font-family: Georgia, serif; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.tl-tbl tr.dirty td { background: rgba(140, 74, 47, 0.07); }
+
+.tl-st {
+  border: 1px solid var(--rule); background: none; cursor: pointer;
+  font-size: 11.5px; padding: 2px 9px; border-radius: 20px;
+  color: var(--ink-soft); font-family: inherit; white-space: nowrap;
+}
+.tl-st[data-v="点亮"] { color: var(--accent); border-color: var(--accent); font-weight: 700; }
+.tl-st[data-v="在读"] { color: var(--ink); }
+.tl-st[data-v="想读"] { color: var(--muted); border-style: dashed; }
+
+.tl-manage-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.tl-btn {
+  border: 1px solid var(--rule); background: none; color: var(--ink);
+  padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 13px;
+  border-radius: 2px;
+}
+.tl-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tl-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tl-btn.primary:hover { opacity: 0.88; color: #fff; }
+
+.tl-export {
+  margin-top: 16px; width: 100%; min-height: 200px;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px;
+  background: var(--paper-2); color: var(--ink);
+  border: 1px solid var(--rule); padding: 12px; line-height: 1.6;
+  white-space: pre; overflow: auto;
+}
+.tl-manage-hint {
+  margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.75;
+}
+.tl-manage-hint code {
+  font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;
+  background: var(--paper-2); padding: 1px 5px; border: 1px solid var(--ink-faint);
+}
+.tl-new { margin-top: 16px; display: none; }
+.tl-new.on { display: block; }
+.tl-new label { display: block; font-size: 12px; color: var(--ink-soft); margin: 9px 0 3px; letter-spacing: 1px; }
+.tl-new input, .tl-new select, .tl-new textarea {
+  width: 100%; padding: 7px 9px; font-family: inherit; font-size: 13px;
+  background: var(--paper-1); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 2px;
+}
+.tl-new .row { display: flex; gap: 12px; }
+.tl-new .row > div { flex: 1; }

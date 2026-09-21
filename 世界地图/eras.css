@@ -1,0 +1,138 @@
+/* 世界历史时间轴 · 每个时代一种纸
+ *
+ * 不是换主题色——每个时代真的有自己的视觉传统。
+ * 引擎读的是这些 CSS 变量,所以换纸不用动任何渲染代码。
+ * :root[data-era] 由 timeline.js 随年份切换。
+ */
+
+/* ---- 古希腊:莎草纸 + 陶器的黑与赭红 ---- */
+:root[data-era="greece"] {
+  --paper-1: #e3d2ae; --paper-2: #d4bf95;
+  --ink: #2b1d16; --ink-soft: #6a5140; --ink-faint: rgba(43, 29, 22, 0.26);
+  --rule: rgba(90, 62, 40, 0.34);
+  --accent: #9c3a20;                       /* 陶器赭红 */
+  --globe-sea-1: #cdb68c; --globe-sea-2: #bda478; --globe-sea-3: #a88d61;
+  --globe-land: #ecdcba; --globe-land-hover: #f4e9cd; --globe-stroke: #6a5140;
+  --space-1: #ddc9a2; --space-2: #cfb88e;
+}
+/* ---- 罗马:灰泥墙与庞贝红 ---- */
+:root[data-era="rome"] {
+  --paper-1: #e7ddc9; --paper-2: #d8cbb2;
+  --ink: #30231c; --ink-soft: #6d574a; --ink-faint: rgba(48, 35, 28, 0.25);
+  --rule: rgba(90, 66, 50, 0.32);
+  --accent: #7c2f22;                       /* 庞贝红 */
+  --globe-sea-1: #cdbfa4; --globe-sea-2: #bcac8d; --globe-sea-3: #a89676;
+  --globe-land: #f0e8d6; --globe-land-hover: #f7f2e5; --globe-stroke: #6d574a;
+  --space-1: #e0d5bf; --space-2: #d2c4aa;
+}
+/* ---- 中世纪:泥金手抄本,羊皮纸上的金、朱砂与群青 ---- */
+:root[data-era="medieval"] {
+  --paper-1: #efe6cc; --paper-2: #e2d5b2;
+  --ink: #2a2118; --ink-soft: #5f4f3a; --ink-faint: rgba(42, 33, 24, 0.24);
+  --rule: rgba(80, 62, 40, 0.34);
+  --accent: #a02c2c;                       /* 朱砂 */
+  --globe-sea-1: #4a5f96; --globe-sea-2: #3b4d7d; --globe-sea-3: #2b3a60;  /* 群青的海 */
+  --globe-land: #f2e9cf; --globe-land-hover: #f9f4e2; --globe-stroke: #8a6b2e;  /* 金线勾边 */
+  --space-1: #e8dcbc; --space-2: #dccba4;
+  --atmos: rgba(184, 134, 11, 0.30);       /* 金箔的光 */
+}
+/* ---- 大航海:波特兰海图(chart.css 的基准,这里只做微调) ---- */
+:root[data-era="sail"] {
+  --accent: #8c4a2f;
+}
+/* ---- 工业革命:蓝图 ---- */
+:root[data-era="industrial"] {
+  --paper-1: #dde3e3; --paper-2: #cbd4d5;
+  --ink: #1d2d38; --ink-soft: #4a5f6b; --ink-faint: rgba(29, 45, 56, 0.24);
+  --rule: rgba(40, 70, 90, 0.30);
+  --accent: #1f5f7a;
+  --globe-sea-1: #b9c7cc; --globe-sea-2: #a5b6bc; --globe-sea-3: #8ea2a9;
+  --globe-land: #eef3f3; --globe-land-hover: #f8fbfb; --globe-stroke: #4a5f6b;
+  --space-1: #d5dddd; --space-2: #c4cfd0;
+  --atmos: rgba(31, 95, 122, 0.22);
+}
+/* ---- 现代:新闻纸 ---- */
+:root[data-era="modern"] {
+  --paper-1: #e8e5dd; --paper-2: #dbd7cc;
+  --ink: #23211e; --ink-soft: #5c5850; --ink-faint: rgba(35, 33, 30, 0.22);
+  --rule: rgba(60, 56, 50, 0.28);
+  --accent: #8a2f2a;
+  --globe-sea-1: #c6c2b8; --globe-sea-2: #b3aea3; --globe-sea-3: #9d988c;
+  --globe-land: #f2f0ea; --globe-land-hover: #fafaf6; --globe-stroke: #5c5850;
+  --space-1: #e1ded6; --space-2: #d4d0c7;
+  --atmos: rgba(90, 86, 78, 0.18);
+}
+/* ---- 当代:干净的中性纸 ---- */
+:root[data-era="contemp"] {
+  --paper-1: #edeae4; --paper-2: #dfdbd3;
+  --ink: #26241f; --ink-soft: #5f5b52; --ink-faint: rgba(38, 36, 31, 0.22);
+  --rule: rgba(70, 66, 58, 0.26);
+  --accent: #2f6d5f;
+  --globe-sea-1: #b9c3c0; --globe-sea-2: #a6b1ad; --globe-sea-3: #8f9b97;
+  --globe-land: #f4f2ec; --globe-land-hover: #fcfbf7; --globe-stroke: #5f5b52;
+  --space-1: #e6e3dc; --space-2: #d9d5cd;
+  --atmos: rgba(47, 109, 95, 0.20);
+}
+
+/* 深色模式下各时代只压暗,不改色相,否则七套暗色配不过来 */
+:root[data-theme="dark"][data-era] {
+  --paper-1: #241d14; --paper-2: #17120c;
+  --ink: #e8dcc0; --ink-soft: #b7a487; --ink-faint: rgba(232, 220, 192, 0.22);
+  --rule: rgba(190, 168, 130, 0.26);
+  --globe-land: #5a4b34; --globe-land-hover: #6d5c41; --globe-stroke: #cbb489;
+  --space-1: #241d14; --space-2: #17120c;
+}
+:root[data-theme="dark"][data-era="medieval"] { --globe-sea-1: #2a3557; --globe-sea-2: #1f2841; --globe-sea-3: #161c2e; }
+:root[data-theme="dark"][data-era="industrial"] { --globe-sea-1: #23343d; --globe-sea-2: #1a262d; --globe-sea-3: #121a1f; }
+
+/* 换纸时让颜色缓过去,不要硬切 */
+.tl-stage, .tl-panel, .tl-dock, .tl-heading, .tl-back, .tl-topbar-actions, .tl-dossier-sheet {
+  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
+}
+
+/* ============ 时代带 ============ */
+.tl-eras {
+  display: flex;
+  gap: 0;
+  margin: 0 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tl-era {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 4px 8px;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--rule);
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.35;
+  transition: background 0.2s, color 0.2s;
+}
+.tl-era:last-child { border-right: none; }
+.tl-era:hover { background: rgba(140, 74, 47, 0.08); color: var(--ink); }
+.tl-era.on { background: var(--accent); color: #fff; }
+.tl-era .n { display: block; font-weight: 600; }
+/* 空的时代要看得出来是空的——那是知识图谱的空洞,不是故障 */
+.tl-era .c { display: block; font-size: 10.5px; opacity: 0.7; margin-top: 1px; }
+.tl-era.empty .n { opacity: 0.45; }
+.tl-era.empty .c { font-style: italic; }
+
+.tl-era-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  min-height: 1.6em;
+}
+
+@media (max-width: 760px) {
+  .tl-era { padding: 6px 2px 7px; font-size: 10.5px; letter-spacing: 0; }
+  .tl-era .c { display: none; }
+  .tl-era-note { display: none; }
+}

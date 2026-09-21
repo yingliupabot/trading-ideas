@@ -4,7 +4,35 @@
 (function () {
   "use strict";
 
-  var MIN_YEAR = 1600, MAX_YEAR = 2050;
+  /* 词条.js 由 scripts/build-index.js 从 词条/<id>/meta.json 生成,是唯一真相。
+     下面把它摊平成渲染代码原来吃的形状——这样既只剩一份清单,
+     又不用把已经测过的渲染路径全部重写一遍。 */
+  var TIMELINE_EVENTS = ENTRIES.map(function (e) {
+    return {
+      id: e.id, year: e.year, era: e.era, status: e.status || "点亮",
+      city: e.place.city, country: e.place.country,
+      lat: e.place.lat, lng: e.place.lng,
+      cat: e.cat, title: e.title, summary: e.summary, chapter: e.note
+    };
+  });
+  var byId = {};
+  TIMELINE_EVENTS.forEach(function (e) { byId[e.id] = e; });
+
+  /* 因果链现在长在词条自己身上,这里收成渲染代码用的年份索引形式 */
+  var CAUSAL_LINKS = [];
+  ENTRIES.forEach(function (e) {
+    (e.links || []).forEach(function (l) {
+      if (l.type !== "因果" || !byId[l.to]) return;
+      CAUSAL_LINKS.push({ from: e.year, to: byId[l.to].year, strength: l.strength, note: l.note });
+    });
+  });
+
+  /* 年份范围随时代走。2850 年拉成一根滑块,现代会被压成几个像素,
+     所以先选时代、再在时代内细调。
+     era 必须初始化为 null:否则首屏那次 applyEra 会被"同一个时代就跳过"挡掉,
+     data-era、时代带高亮、时代说明全都设不上。 */
+  var _e0 = eraOf(1720);
+  var era = null, MIN_YEAR = _e0.from, MAX_YEAR = _e0.to;
   var NS = "http://www.w3.org/2000/svg";
   var CALM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -21,12 +49,21 @@
   var flowLayer = document.getElementById("tl-flows");
   var partLayer = document.getElementById("tl-particles");
   var flowToggle = document.getElementById("tl-flow-toggle");
+  var linkLayer = document.getElementById("tl-links");
+  var linkToggle = document.getElementById("tl-link-toggle");
+  var atmos = document.querySelector(".tl-atmos");
+  var rhumbLayer = document.getElementById("tl-rhumbs");
+  var eraBand = document.getElementById("tl-eras");
+  var eraNote = document.getElementById("tl-era-note");
+  var ticks = document.getElementById("tl-ticks");
+  var dossier = document.getElementById("tl-dossier");
+  var dossierSheet = document.getElementById("tl-dossier-sheet");
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
   var timer = null, waves = [], openIdx = null;
-  var takeWaves, takeFlows, takeParts;
-  var flowsOn = true, flowClock = 0;
+  var takeWaves, takeFlows, takeParts, takeLinks, takeRhumbs;
+  var flowsOn = true, flowClock = 0, linksOn = true;
 
   /* 每帧 innerHTML 重建 DOM 会把帧率从 53 压到 23(实测)。
      改成节点池:建一次,之后只改属性,多余的隐藏起来。 */
@@ -45,7 +82,7 @@
       return store;
     };
   }
-  var wavePool = [], flowPool = [], partPool = [];
+  var wavePool = [], flowPool = [], partPool = [], linkPool = [], rhumbPool = [];
   var FLOW_WINDOW = 4;      /* 一条流动在它发生年份的前后各 4 年内可见 */
   /* 抬升按角距缩放(见 flowPrep):纽约→雷克雅未克这种短程若和跨洋同高,
      会拱到北极上方去,看着像脱离了地球。0.05 起步,跨半个地球时到 0.26。 */
@@ -53,6 +90,8 @@
   takeWaves = pool(waveLayer, "path", wavePool);
   takeFlows = pool(flowLayer, "path", flowPool);
   takeParts = pool(partLayer, "circle", partPool);
+  takeLinks = pool(linkLayer, "path", linkPool);
+  takeRhumbs = pool(rhumbLayer, "path", rhumbPool);
 
   Globe.setWorld(WORLD_MAP);
   Globe.mountCanvas(document.getElementById("tl-canvas"));
@@ -106,6 +145,8 @@
     return { ev: ev, g: g, dot: dot, halo: halo, glow: glow };
   });
   svg.addEventListener("click", function () { openIdx = null; popup.hidden = true; });
+  /* 注意:开卷宗的点击监听在下面单独注册,两者都会收到事件——
+     先关弹窗再开卷宗,顺序无所谓,互不干扰。 */
 
   /* ---------- 弹窗 ---------- */
   function fillPopup(ev) {
@@ -206,6 +247,325 @@
     });
   }
 
+  /* ---------- 词条管理 ----------
+   * 静态站没有后端。真正写入只有两条路:把 GitHub token 放进浏览器
+   * (那个 token 能改你的整个仓库,放前端是真风险),或者加后端(就不 self-contained 了)。
+   * 所以这里是"页内编辑 + 导出":草稿存 localStorage,导出给你粘回文件。
+   */
+  var DRAFT_KEY = "ti-entry-drafts";
+  var drafts = (function () {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { return {}; }
+  })();
+  function saveDrafts() {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) {}
+  }
+  function effective(id) {
+    var base = ENTRIES.filter(function (e) { return e.id === id; })[0];
+    return Object.assign({}, base, drafts[id] || {});
+  }
+  function allRows() {
+    var rows = ENTRIES.map(function (e) { return effective(e.id); });
+    /* 草稿里新增的词条在 ENTRIES 里还没有 */
+    Object.keys(drafts).forEach(function (id) {
+      if (!ENTRIES.some(function (e) { return e.id === id; })) rows.push(drafts[id]);
+    });
+    return rows.sort(function (a, b) { return a.year - b.year; });
+  }
+
+  var STATUSES = ["点亮", "在读", "想读"];
+  var manage = document.getElementById("tl-manage");
+  var tbody = document.getElementById("tl-tbl-body");
+
+  function renderTable() {
+    tbody.innerHTML = allRows().map(function (e) {
+      var dirty = !!drafts[e.id];
+      return '<tr class="' + (dirty ? "dirty" : "") + '" data-id="' + e.id + '">' +
+        '<td class="y">' + fmtYear(e.year) + '</td>' +
+        '<td>' + e.title + (e.note ? ' <span style="opacity:.5">📖</span>' : "") + '</td>' +
+        '<td style="color:var(--muted)">' + (ERAS.filter(function (x) { return x.id === e.era; })[0] || {name: "—"}).name + '</td>' +
+        '<td><span class="tag-pill tl-cat-' + e.cat + '">' + e.cat + '</span></td>' +
+        '<td><button class="tl-st" data-v="' + (e.status || "点亮") + '">' + (e.status || "点亮") + '</button></td>' +
+        '</tr>';
+    }).join("");
+    tbody.querySelectorAll(".tl-st").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.closest("tr").dataset.id;
+        var cur = btn.dataset.v;
+        var next = STATUSES[(STATUSES.indexOf(cur) + 1) % STATUSES.length];
+        drafts[id] = Object.assign({}, effective(id), { status: next });
+        saveDrafts(); renderTable(); refreshStatuses();
+      });
+    });
+    var n = Object.keys(drafts).length;
+    document.getElementById("tl-manage-hint").innerHTML = n
+      ? "有 <b>" + n + "</b> 处未导出的改动（底色标出来了）。草稿存在浏览器里，换台机器就没了——导出粘回文件才算数。"
+      : "还没有改动。";
+  }
+  /* 草稿里的状态要立刻反映到地球上,否则改了看不见 */
+  function refreshStatuses() {
+    marks.forEach(function (m) {
+      var d = drafts[m.ev.id];
+      if (d && d.status) m.ev.status = d.status;
+    });
+  }
+
+  document.getElementById("tl-manage-open").addEventListener("click", function () {
+    renderTable(); manage.hidden = false;
+  });
+  document.getElementById("tl-manage-close").addEventListener("click", function () { manage.hidden = true; });
+  manage.addEventListener("click", function (e) { if (e.target === manage) manage.hidden = true; });
+
+  document.getElementById("tl-new-toggle").addEventListener("click", function () {
+    var box = document.getElementById("tl-new");
+    box.classList.toggle("on");
+    document.getElementById("tl-new-add").style.display = box.classList.contains("on") ? "" : "none";
+  });
+  document.getElementById("tl-new-add").addEventListener("click", function () {
+    var v = function (id) { return document.getElementById(id).value.trim(); };
+    var title = v("nf-title"), year = parseInt(v("nf-year"), 10);
+    if (!title || isNaN(year)) { alert("标题和年份是必填的。"); return; }
+    var id = year + "-" + title;
+    drafts[id] = {
+      id: id, title: title, year: year, era: eraOf(year).id,
+      place: { city: v("nf-city"), country: v("nf-country"),
+               lat: parseFloat(v("nf-lat")) || 0, lng: parseFloat(v("nf-lng")) || 0 },
+      cat: v("nf-cat") || "经济",
+      status: v("nf-status") || "想读",
+      summary: v("nf-summary"), note: null, links: []
+    };
+    saveDrafts(); renderTable();
+    ["nf-title","nf-year","nf-city","nf-country","nf-lat","nf-lng","nf-summary"].forEach(function (k) {
+      document.getElementById(k).value = "";
+    });
+  });
+  document.getElementById("tl-export").addEventListener("click", function () {
+    var out = document.getElementById("tl-export-out");
+    var ids = Object.keys(drafts);
+    if (!ids.length) { out.hidden = false; out.textContent = "没有改动。"; return; }
+    out.hidden = false;
+    out.textContent = ids.map(function (id) {
+      var e = Object.assign({}, drafts[id]);
+      delete e.id;                       /* id 就是目录名,不重复写进文件 */
+      return "# 词条/" + id + "/meta.json\n" + JSON.stringify(e, null, 2);
+    }).join("\n\n");
+  });
+  document.getElementById("tl-reset").addEventListener("click", function () {
+    if (!confirm("丢弃所有未导出的草稿？")) return;
+    drafts = {}; saveDrafts(); renderTable();
+    document.getElementById("tl-export-out").hidden = true;
+  });
+
+  /* ---------- 时代 ---------- */
+  function eventsIn(e) {
+    return TIMELINE_EVENTS.filter(function (ev) { return ev.year >= e.from && ev.year < e.to; });
+  }
+  function buildEraBand() {
+    eraBand.innerHTML = ERAS.map(function (e) {
+      var n = eventsIn(e).length;
+      return '<button class="tl-era' + (n ? "" : " empty") + '" data-era="' + e.id + '">' +
+        '<span class="n">' + e.name + '</span>' +
+        '<span class="c">' + (n ? n + " 处" : "空白") + '</span></button>';
+    }).join("");
+    eraBand.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var e = ERAS.filter(function (x) { return x.id === b.dataset.era; })[0];
+        var evs = eventsIn(e);
+        /* 有内容就落到第一件事上,空白时代落到中点 */
+        setYear(evs.length ? evs[0].year : Math.round((e.from + e.to) / 2), false);
+      });
+    });
+  }
+  /* 刻度按当前时代重算,并处理公元前的负年份 */
+  function fmtYear(y) { return y < 0 ? "前" + (-y) : String(y); }
+  function applyEra(e) {
+    if (era && era.id === e.id) return;
+    era = e; MIN_YEAR = e.from; MAX_YEAR = e.to;
+    document.documentElement.setAttribute("data-era", e.id);
+    slider.min = e.from; slider.max = e.to;
+    eraNote.textContent = e.note;
+    eraBand.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.era === e.id);
+    });
+    var span = e.to - e.from, out = [];
+    for (var i = 0; i <= 5; i++) out.push("<span>" + fmtYear(Math.round(e.from + span * i / 5)) + "</span>");
+    ticks.innerHTML = out.join("");
+  }
+
+  /* ---------- 国家卷宗 ----------
+   * 不是"放大这个国家的地图"——数据里每个国家只有一个多边形,没有城市、
+   * 没有行政区,放大之后没有新东西可看。展开的是它的档案。
+   * 那个 54 顶点的轮廓当大地图不能看,缩成 60px 的封缄印章正好。
+   */
+  var cityCountry = {};
+  Object.keys(FLOW_PLACES).forEach(function (k) {
+    var p = FLOW_PLACES[k];
+    cityCountry[k] = Globe.countryAt(p.lng, p.lat) || CITY_COUNTRY_FALLBACK[k] || null;
+  });
+
+  function gather(en) {
+    var cities = Object.keys(FLOW_PLACES).filter(function (k) { return cityCountry[k] === en; });
+    var evs = TIMELINE_EVENTS.filter(function (e) {
+      return (COUNTRY_EN[e.country] || e.country) === en;
+    });
+    var years = evs.map(function (e) { return e.year; });
+    return {
+      en: en,
+      cn: COUNTRY_CN[en] || en,
+      events: evs.sort(function (a, b) { return a.year - b.year; }),
+      out: MONEY_FLOWS.filter(function (f) { return cities.indexOf(f.from) >= 0; }),
+      into: MONEY_FLOWS.filter(function (f) { return cities.indexOf(f.to) >= 0; }),
+      links: CAUSAL_LINKS.filter(function (l) {
+        return years.indexOf(l.from) >= 0 || years.indexOf(l.to) >= 0;
+      }),
+      cities: cities.map(function (k) { return FLOW_PLACES[k].name; })
+    };
+  }
+
+  function openDossier(en) {
+    var d = gather(en);
+    document.getElementById("tl-seal-path").setAttribute("d", Globe.outlinePath(en, 60));
+    document.getElementById("tl-dossier-name").textContent = d.cn;
+    document.getElementById("tl-dossier-sub").textContent =
+      d.cn === d.en ? "" : d.en;
+
+    var html = "";
+    if (d.events.length) {
+      html += '<h3>这里发生过什么</h3>';
+      html += d.events.map(function (e) {
+        return '<div class="tl-doss-row"><span class="tl-doss-year">' + e.year + '</span>' +
+          '<span class="tag-pill tl-cat-' + e.cat + '">' + e.cat + '</span>' +
+          '<strong>' + e.title + '</strong><p>' + e.summary + '</p></div>';
+      }).join("");
+    }
+    if (d.out.length || d.into.length) {
+      html += '<h3>钱从这里去了哪儿，又从哪儿来</h3>';
+      html += d.out.map(function (f) {
+        return '<div class="tl-doss-row flow"><span class="tl-doss-year">' + f.year + '</span>' +
+          '<strong>→ ' + FLOW_PLACES[f.to].name + '</strong>' +
+          '<span class="tl-flow-kind">' + f.kind + '</span><p>' + f.note + '</p></div>';
+      }).join("");
+      html += d.into.map(function (f) {
+        return '<div class="tl-doss-row flow"><span class="tl-doss-year">' + f.year + '</span>' +
+          '<strong>← ' + FLOW_PLACES[f.from].name + '</strong>' +
+          '<span class="tl-flow-kind">' + f.kind + '</span><p>' + f.note + '</p></div>';
+      }).join("");
+    }
+    if (d.links.length) {
+      html += '<h3>它牵在哪条因果链上</h3>';
+      html += d.links.map(function (l) {
+        return '<div class="tl-doss-row link"><span class="tl-link-strength">' + l.strength + '</span>' +
+          '<strong>' + l.from + ' → ' + l.to + '</strong><p>' + l.note + '</p></div>';
+      }).join("");
+    }
+    if (!html) {
+      /* 176 个国家里只有约 10 个有内容。空状态不该是一张白纸 */
+      html = '<p class="tl-doss-empty">这一页还是空白的。<br>' +
+             '《逃不开的经济周期》还没写到这里——也可能是它从没被卷进来过。<br>' +
+             '<span>往 events.js 里加一行，这张纸就有字了。</span></p>';
+    }
+    document.getElementById("tl-dossier-body").innerHTML = html;
+
+    dossier.hidden = false;
+    /* 强制回流一次,否则加 class 和去 hidden 在同一帧,动画不触发 */
+    void dossierSheet.offsetWidth;
+    dossierSheet.classList.add("open");
+
+    var aim = Globe.aimOf(en);
+    if (aim) { Globe.rotateTo(aim[0], aim[1]); Globe.setZoom(2.2); }
+  }
+  function closeDossier() {
+    dossierSheet.classList.remove("open");
+    Globe.setZoom(1);
+    setTimeout(function () { dossier.hidden = true; }, 420);
+  }
+  document.getElementById("tl-dossier-close").addEventListener("click", closeDossier);
+  dossier.addEventListener("click", function (e) { if (e.target === dossier) closeDossier(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !dossier.hidden) closeDossier();
+  });
+
+  /* 点空白海面关弹窗,点陆地开卷宗 */
+  svg.addEventListener("click", function (e) {
+    if (drag.didDrag()) return;
+    var box = svg.getBoundingClientRect();
+    var X = (e.clientX - box.left) / box.width * 240 - 120;
+    var Y = (e.clientY - box.top) / box.height * 240 - 120;
+    var hit = Globe.pick(X, Y);
+    if (hit && hit.country) openDossier(hit.country);
+  });
+
+  /* ---------- 罗经线 ----------
+   * 波特兰海图最标志性的东西:从罗盘中心放射出去的航向线。
+   * 在球面上它们就是过同一点的大圆——正好复用 arcPath 的几何。
+   */
+  var RHUMB_HUBS = [
+    { lng: -30, lat: 30 },   /* 北大西洋:1720-2008 的主战场 */
+    { lng: 100, lat: 10 }    /* 东印度洋:香料与东印度公司的旧航路 */
+  ];
+  var rhumbPrep = [];
+  RHUMB_HUBS.forEach(function (h, hi) {
+    for (var a = 0; a < 360; a += 22.5) {              /* 十六个罗经方位 */
+      var b = a * Math.PI / 180;
+      /* 从中心沿方位角走 78°,取终点,两点定一条大圆 */
+      var t = 78 * Math.PI / 180, p0 = h.lat * Math.PI / 180, l0 = h.lng * Math.PI / 180;
+      var lat = Math.asin(Math.sin(p0) * Math.cos(t) + Math.cos(p0) * Math.sin(t) * Math.cos(b));
+      var lng = l0 + Math.atan2(Math.sin(b) * Math.sin(t) * Math.cos(p0), Math.cos(t) - Math.sin(p0) * Math.sin(lat));
+      var A = [h.lng, h.lat], B = [lng * 180 / Math.PI, lat * 180 / Math.PI];
+      rhumbPrep.push({ pr: Globe.prepArc(A, B), major: (a % 90 === 0) && hi === 0 });
+    }
+  });
+  function paintRhumbs() {
+    var rp = takeRhumbs(rhumbPrep.length), n = 0;
+    rhumbPrep.forEach(function (R) {
+      var d = Globe.arcPathFrom(R.pr, { lift: 0, steps: 26 });
+      if (!d) return;
+      var el = rp[n++];
+      el.removeAttribute("display");
+      el.setAttribute("class", "tl-rhumb" + (R.major ? " major" : ""));
+      el.setAttribute("d", d);
+    });
+    for (var i = n; i < rp.length; i++) rp[i].setAttribute("display", "none");
+  }
+
+  /* ---------- 因果链 ----------
+   * 视觉上刻意用中性色:因果是一种"关系",不是又一个并列的分类。
+   * 再加第七个色相只会把已经验证过的六色体系挤坏。
+   */
+  var byYear = {};
+  TIMELINE_EVENTS.forEach(function (ev, i) { byYear[ev.year] = i; });
+  var linkPrep = CAUSAL_LINKS.map(function (l) {
+    var ia = byYear[l.from], ib = byYear[l.to];
+    if (ia == null || ib == null) return null;     /* 指向不存在的事件就跳过 */
+    var A = at(TIMELINE_EVENTS[ia], ia), B = at(TIMELINE_EVENTS[ib], ib);
+    return { l: l, a: A, b: B, pr: Globe.prepArc(A, B),
+             lift: 0.10 + 0.26 * (Globe.angleBetween(A, B) / 180) };
+  }).filter(Boolean);
+
+  function activeLinks() {
+    if (!linksOn) return [];
+    /* 结果已经发生的链条才显示。往后拖,因果之网一条条织起来 */
+    return linkPrep.filter(function (P) { return P.l.to <= currentYear; });
+  }
+  function paintLinks() {
+    var list = activeLinks();
+    var lp = takeLinks(list.length);
+    var drawn = 0;
+    list.forEach(function (P) {
+      var d = Globe.arcPathFrom(P.pr, { lift: P.lift, steps: 48 });
+      if (!d) return;
+      var el = lp[drawn++];
+      el.removeAttribute("display");
+      /* 越近越亮,久远的链条沉下去,和余烬同一个逻辑 */
+      var age = currentYear - P.l.to;
+      var op = age <= 6 ? 0.85 : Math.max(0.2, 0.5 - age / 700);
+      el.setAttribute("class", "tl-link s-" + P.l.strength);
+      el.setAttribute("d", d);
+      el.setAttribute("opacity", op.toFixed(2));
+      el.setAttribute("stroke-dashoffset", (-flowClock * 14).toFixed(1));
+    });
+    for (var i = drawn; i < lp.length; i++) lp[i].setAttribute("display", "none");
+  }
+
   /* ---------- 每帧重画 ---------- */
   function paint() {
     Globe.renderCanvas();
@@ -221,7 +581,8 @@
       /* 刚发生的亮,年代久远的沉成余烬——拖到 2050 时整颗星球布满历史的光点 */
       var age = currentYear - ev.year;
       var fresh = age <= 4;
-      m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past"));
+      m.g.setAttribute("class", "tl-marker cat-" + ev.cat + (fresh ? " st-now" : " st-past") +
+        " k-" + (ev.status || "点亮"));
       m.dot.setAttribute("r", fresh ? 3 : 1.9);
       m.glow.setAttribute("r", fresh ? 7 : 4.5);
     });
@@ -245,20 +606,39 @@
       hi.setAttribute("class", "tl-wave cat-" + it.w.ev.cat);
       hi.setAttribute("d", d); hi.setAttribute("opacity", it.o.toFixed(2));
     });
+    paintRhumbs();
+    paintLinks();
     paintFlows();
+    /* 放大到贴近地表时,球缘的大气层已经在视口外,留着只会是一道假边 */
+    if (atmos) {
+      var z = Globe.zoom;
+      atmos.style.transform = "scale(" + z.toFixed(3) + ")";
+      atmos.style.opacity = z > 1.6 ? "0" : (1 - (z - 1) / 0.6).toFixed(2);
+    }
 
     placePopup();
   }
 
   /* ---------- 年份 ---------- */
   function render() {
-    yearBadge.textContent = currentYear;
-    nowYear.textContent = currentYear;
+    applyEra(eraOf(currentYear));
+    yearBadge.textContent = fmtYear(currentYear);
+    nowYear.textContent = fmtYear(currentYear);
     slider.value = currentYear;
 
     var todays = TIMELINE_EVENTS.filter(function (ev) {
       return ev.year === currentYear && activeCats[ev.cat];
     });
+    var linkHtml = activeLinks().filter(function (P) {
+      return P.l.to === currentYear || P.l.from === currentYear;
+    }).map(function (P) {
+      var a = TIMELINE_EVENTS[byYear[P.l.from]], b = TIMELINE_EVENTS[byYear[P.l.to]];
+      return '<div class="tl-link-item s-' + P.l.strength + '">' +
+        '<span class="tl-link-strength">' + P.l.strength + '</span>' +
+        '<strong>' + P.l.from + ' ' + a.title + ' → ' + P.l.to + ' ' + b.title + '</strong>' +
+        '<p>' + P.l.note + '</p></div>';
+    }).join("");
+
     var flowHtml = activeFlows().map(function (f) {
       return '<div class="tl-flow-item kind-' + f.kind + '">' +
         '<span class="tl-flow-kind">' + f.kind + '</span>' +
@@ -267,10 +647,11 @@
         '<p>' + f.note + '</p></div>';
     }).join("");
 
-    if (!todays.length && !flowHtml) {
+    var extra = linkHtml + flowHtml;
+    if (!todays.length && !extra) {
       nowList.innerHTML = '<p class="tl-empty">这一年，世界安静得像深呼吸——拖动时间轴，去有故事的年份看看。</p>';
     } else if (!todays.length) {
-      nowList.innerHTML = flowHtml;
+      nowList.innerHTML = extra;
     } else {
       nowList.innerHTML = todays.map(function (ev) {
         var i = TIMELINE_EVENTS.indexOf(ev);
@@ -280,7 +661,7 @@
           '<strong>' + ev.title + '</strong>' +
           '<span class="tl-now-place">' + ev.city + '，' + ev.country + '</span>' +
           '<p>' + ev.summary + '</p>' + link + '</div>';
-      }).join("") + flowHtml;
+      }).join("") + extra;
       nowList.querySelectorAll(".tl-now-item").forEach(function (el) {
         el.addEventListener("click", function () {
           var i = +el.dataset.idx, ev = TIMELINE_EVENTS[i];
@@ -334,10 +715,12 @@
   }
   playBtn.addEventListener("click", function () {
     if (timer) { stopPlay(); return; }
-    if (currentYear >= MAX_YEAR) { currentYear = MIN_YEAR; waves.length = 0; openIdx = null; }
+    if (currentYear >= MAX_YEAR - 1) { currentYear = MIN_YEAR; waves.length = 0; openIdx = null; }
     playBtn.textContent = "⏸"; playBtn.classList.add("playing");
     timer = setInterval(function () {
-      var y = currentYear + 2;
+      /* 步长按时代跨度缩放:中世纪近千年,两年一步要走五百下 */
+      var step = Math.max(1, Math.round((MAX_YEAR - MIN_YEAR) / 180));
+      var y = currentYear + step;
       if (y >= MAX_YEAR) { setYear(MAX_YEAR, true); stopPlay(); return; }
       setYear(y, true);
     }, 160);
@@ -361,6 +744,17 @@
     });
   }
 
+  if (linkToggle) {
+    linkToggle.addEventListener("click", function () {
+      linksOn = !linksOn;
+      linkToggle.setAttribute("aria-pressed", linksOn ? "true" : "false");
+      linkToggle.classList.toggle("off", !linksOn);
+      render();
+    });
+  }
+
+  buildEraBand();
+  refreshStatuses();
   render();
   requestAnimationFrame(loop);
 
@@ -371,6 +765,12 @@
     year: function () { return currentYear; },
     waves: function () { return waves; },
     flows: function () { return activeFlows(); },
+    links: function () { return activeLinks(); },
+    zoom: function (z) { Globe.setZoom(z); },
+    openCountry: openDossier, closeCountry: closeDossier,
+    gather: gather, cityCountry: cityCountry,
+    era: function () { return era; }, eras: ERAS,
+    drafts: function () { return drafts; }, rows: allRows,
     toggleFlows: function () { flowToggle.click(); },
     globe: Globe
   };

@@ -1,0 +1,16 @@
+{
+  "title": "现金支付危机",
+  "year": 1797,
+  "era": "industrial",
+  "place": {
+    "city": "伦敦",
+    "country": "英国",
+    "lat": 51.5,
+    "lng": -0.12
+  },
+  "cat": "经济",
+  "status": "点亮",
+  "summary": "战争压力下英格兰银行暂停纸币兑付黄金：信心消失的那天，就是危机开始的那天。",
+  "note": null,
+  "links": []
+}

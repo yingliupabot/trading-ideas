@@ -72,8 +72,9 @@ body.tl-immersive {
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   pointer-events: none;
+  /* 不要 border-radius:zoom=1 时海洋圆本身就是圆的(画布四角透明),
+     放大后这个圆角会把画面裁成一个假的球缘 */
 }
 #world-map {
   position: absolute;
@@ -507,3 +508,52 @@ body.tl-immersive {
 @media (prefers-reduced-motion: reduce) {
   .tl-particle { display: none; }
 }
+
+/* ============ 因果链 ============
+ * 刻意用中性色:因果是一种"关系",不是又一个并列的分类。
+ * 再加第七个色相只会把已经验证过的六色体系挤坏。
+ * 确信度用线型区分——虚线越虚,断言越弱。
+ */
+:root { --link: #7b8496; }
+:root[data-theme="dark"] { --link: #aab4c8; }
+
+.tl-link {
+  fill: none;
+  stroke: var(--link);
+  stroke-width: 0.55;
+  stroke-linecap: round;
+}
+.tl-link.s-确凿    { stroke-dasharray: 7 2.5; }
+.tl-link.s-常见论点 { stroke-dasharray: 4 3.5; }
+.tl-link.s-有争议   { stroke-dasharray: 1.6 4; }
+.tl-link.s-思想实验 { stroke-dasharray: 0.7 5; stroke-width: 0.45; }
+
+.tl-link-pill {
+  color: var(--link) !important;
+  background: color-mix(in srgb, var(--link) 16%, transparent) !important;
+}
+.tl-filters button.tl-link-pill.off { opacity: 0.32; }
+
+.tl-link-item {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--link);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin: 0 0 9px;
+  background: var(--panel);
+}
+.tl-link-strength {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--link);
+  border: 1px solid var(--link);
+  border-radius: 20px;
+  padding: 1px 8px;
+  margin-right: 7px;
+}
+.tl-link-item strong { font-size: 13.5px; line-height: 1.5; }
+.tl-link-item p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+/* 大气层随缩放淡出(内联 style 控制),这里只给它一个过渡 */
+.tl-atmos { transition: opacity 0.25s; transform-origin: 50% 50%; }

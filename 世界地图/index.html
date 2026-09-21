@@ -8,6 +8,8 @@
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="stylesheet" href="../styles.css">
 <link rel="stylesheet" href="timeline.css">
+<link rel="stylesheet" href="chart.css">
+<link rel="stylesheet" href="eras.css">
 </head>
 <body class="tl-immersive">
 
@@ -18,6 +20,8 @@
     <div class="tl-atmos" aria-hidden="true"></div>
     <svg id="world-map" viewBox="-120 -120 240 240" role="img"
          aria-label="可拖动旋转的地球，历史事件随年份在球面上点亮">
+      <g id="tl-rhumbs"></g>
+      <g id="tl-links"></g>
       <g id="tl-flows"></g>
       <g id="tl-waves"></g>
       <g id="tl-markers"></g>
@@ -35,7 +39,7 @@
   </a>
   <div class="tl-heading">
     <h1>🗺 世界历史时间轴</h1>
-    <p>拖动地球，拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+    <p>拖动旋转 · 滚轮缩放 · 拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
   </div>
   <div class="tl-topbar-actions">
     <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -59,8 +63,72 @@
   </div>
 </aside>
 
+<!-- 词条管理:读和写在同一个页面上,不另开后台 -->
+<div class="tl-manage" id="tl-manage" hidden>
+  <div class="tl-manage-sheet">
+    <button class="tl-dossier-close" id="tl-manage-close" aria-label="关闭">×</button>
+    <h2>词条</h2>
+    <p class="sub">点状态可以循环切换：点亮 → 在读 → 想读。<br>
+      改完导出，粘回 <code>词条/&lt;id&gt;/meta.json</code>，再跑 <code>npm run index</code>。</p>
+    <table class="tl-tbl"><thead><tr>
+      <th style="width:70px">年份</th><th>标题</th><th style="width:78px">时代</th>
+      <th style="width:62px">分类</th><th style="width:78px">状态</th>
+    </tr></thead><tbody id="tl-tbl-body"></tbody></table>
+
+    <div class="tl-new" id="tl-new">
+      <div class="row">
+        <div><label>标题</label><input id="nf-title" placeholder="伯罗奔尼撒战争"></div>
+        <div><label>年份（公元前用负数）</label><input id="nf-year" type="number" placeholder="-431"></div>
+      </div>
+      <div class="row">
+        <div><label>城市</label><input id="nf-city" placeholder="雅典"></div>
+        <div><label>国家</label><input id="nf-country" placeholder="希腊"></div>
+      </div>
+      <div class="row">
+        <div><label>纬度</label><input id="nf-lat" type="number" step="0.01" placeholder="37.98"></div>
+        <div><label>经度</label><input id="nf-lng" type="number" step="0.01" placeholder="23.73"></div>
+      </div>
+      <div class="row">
+        <div><label>分类</label><select id="nf-cat">
+          <option>经济</option><option>政治</option><option>战争</option><option>科技</option><option>文化</option>
+        </select></div>
+        <div><label>状态</label><select id="nf-status">
+          <option>想读</option><option>在读</option><option>点亮</option>
+        </select></div>
+      </div>
+      <label>一句话</label><textarea id="nf-summary" rows="2" placeholder="不懂就先留空，标成「想读」。"></textarea>
+    </div>
+
+    <div class="tl-manage-actions">
+      <button class="tl-btn" id="tl-new-toggle">+ 新词条</button>
+      <button class="tl-btn primary" id="tl-new-add" style="display:none">加进草稿</button>
+      <button class="tl-btn" id="tl-export">导出改动</button>
+      <button class="tl-btn" id="tl-reset">丢弃草稿</button>
+    </div>
+    <pre class="tl-export" id="tl-export-out" hidden></pre>
+    <p class="tl-manage-hint" id="tl-manage-hint"></p>
+  </div>
+</div>
+
+<!-- 国家卷宗:点进一个国家时从顶边展开的牛皮纸 -->
+<div class="tl-dossier" id="tl-dossier" hidden>
+  <div class="tl-dossier-sheet" id="tl-dossier-sheet">
+    <button class="tl-dossier-close" id="tl-dossier-close" aria-label="收起">×</button>
+    <header class="tl-dossier-head">
+      <svg class="tl-seal" viewBox="0 0 60 60" aria-hidden="true"><path id="tl-seal-path"/></svg>
+      <div class="tl-dossier-title">
+        <h2 id="tl-dossier-name"></h2>
+        <p id="tl-dossier-sub"></p>
+      </div>
+    </header>
+    <div class="tl-dossier-body" id="tl-dossier-body"></div>
+  </div>
+</div>
+
 <!-- 底部控制坞 -->
 <div class="tl-dock">
+  <div class="tl-eras" id="tl-eras" role="group" aria-label="选择时代"></div>
+  <p class="tl-era-note" id="tl-era-note"></p>
   <div class="tl-filters" id="tl-filters" role="group" aria-label="按分类筛选">
     <button data-cat="经济" class="tag-pill tl-cat-经济">经济</button>
     <button data-cat="政治" class="tag-pill tl-cat-政治">政治</button>
@@ -69,22 +137,24 @@
     <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
     <span class="tl-filter-sep" aria-hidden="true"></span>
     <button id="tl-flow-toggle" class="tag-pill tl-flow-pill" aria-pressed="true">💸 资金流动</button>
+    <button id="tl-link-toggle" class="tag-pill tl-link-pill" aria-pressed="true">🔗 因果链</button>
+    <button id="tl-manage-open" class="tag-pill" title="管理词条">✎ 词条</button>
   </div>
   <div class="tl-transport">
     <div class="tl-year-badge"><span id="tl-year">1720</span></div>
     <button id="tl-play" aria-label="播放时间轴" title="播放">▶</button>
     <div class="tl-slider-wrap">
-      <input type="range" id="tl-slider" min="1600" max="2050" step="1" value="1720" aria-label="年份">
-      <div class="tl-ticks">
-        <span>1600</span><span>1700</span><span>1800</span><span>1900</span><span>2000</span><span>2050</span>
-      </div>
+      <input type="range" id="tl-slider" min="1453" max="1760" step="1" value="1720" aria-label="年份">
+      <div class="tl-ticks" id="tl-ticks"></div>
     </div>
   </div>
 </div>
 
 <script src="map.js"></script>
-<script src="events.js"></script>
+<script src="词条.js"></script>
 <script src="flows.js"></script>
+<script src="countries.js"></script>
+<script src="eras.js"></script>
 <script src="globe.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>
