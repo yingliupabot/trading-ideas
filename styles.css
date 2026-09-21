@@ -467,3 +467,12 @@ a.chapter-cell:hover { border-color: var(--accent); text-decoration: none; trans
   margin-top: 8px;
   text-align: center;
 }
+
+/* 章节格子第三态:懂了但还没写。"我懂没懂"和"我写没写"是两个轴,
+   混成一个就看不出自己欠的到底是理解还是笔记。 */
+.chapter-cell.known {
+  opacity: 0.82;
+  border-style: solid;
+  border-color: var(--accent, #58a6ff);
+}
+.chapter-cell.known .ch-num { color: var(--accent, #58a6ff); }
