@@ -21,12 +21,15 @@
   var flowLayer = document.getElementById("tl-flows");
   var partLayer = document.getElementById("tl-particles");
   var flowToggle = document.getElementById("tl-flow-toggle");
+  var linkLayer = document.getElementById("tl-links");
+  var linkToggle = document.getElementById("tl-link-toggle");
+  var atmos = document.querySelector(".tl-atmos");
 
   var currentYear = 1720;
   var activeCats = { "经济": true, "政治": true, "战争": true, "科技": true, "文化": true };
   var timer = null, waves = [], openIdx = null;
-  var takeWaves, takeFlows, takeParts;
-  var flowsOn = true, flowClock = 0;
+  var takeWaves, takeFlows, takeParts, takeLinks;
+  var flowsOn = true, flowClock = 0, linksOn = true;
 
   /* 每帧 innerHTML 重建 DOM 会把帧率从 53 压到 23(实测)。
      改成节点池:建一次,之后只改属性,多余的隐藏起来。 */
@@ -45,7 +48,7 @@
       return store;
     };
   }
-  var wavePool = [], flowPool = [], partPool = [];
+  var wavePool = [], flowPool = [], partPool = [], linkPool = [];
   var FLOW_WINDOW = 4;      /* 一条流动在它发生年份的前后各 4 年内可见 */
   /* 抬升按角距缩放(见 flowPrep):纽约→雷克雅未克这种短程若和跨洋同高,
      会拱到北极上方去,看着像脱离了地球。0.05 起步,跨半个地球时到 0.26。 */
@@ -53,6 +56,7 @@
   takeWaves = pool(waveLayer, "path", wavePool);
   takeFlows = pool(flowLayer, "path", flowPool);
   takeParts = pool(partLayer, "circle", partPool);
+  takeLinks = pool(linkLayer, "path", linkPool);
 
   Globe.setWorld(WORLD_MAP);
   Globe.mountCanvas(document.getElementById("tl-canvas"));
@@ -206,6 +210,45 @@
     });
   }
 
+  /* ---------- 因果链 ----------
+   * 视觉上刻意用中性色:因果是一种"关系",不是又一个并列的分类。
+   * 再加第七个色相只会把已经验证过的六色体系挤坏。
+   */
+  var byYear = {};
+  TIMELINE_EVENTS.forEach(function (ev, i) { byYear[ev.year] = i; });
+  var linkPrep = CAUSAL_LINKS.map(function (l) {
+    var ia = byYear[l.from], ib = byYear[l.to];
+    if (ia == null || ib == null) return null;     /* 指向不存在的事件就跳过 */
+    var A = at(TIMELINE_EVENTS[ia], ia), B = at(TIMELINE_EVENTS[ib], ib);
+    return { l: l, a: A, b: B, pr: Globe.prepArc(A, B),
+             lift: 0.10 + 0.26 * (Globe.angleBetween(A, B) / 180) };
+  }).filter(Boolean);
+
+  function activeLinks() {
+    if (!linksOn) return [];
+    /* 结果已经发生的链条才显示。往后拖,因果之网一条条织起来 */
+    return linkPrep.filter(function (P) { return P.l.to <= currentYear; });
+  }
+  function paintLinks() {
+    var list = activeLinks();
+    var lp = takeLinks(list.length);
+    var drawn = 0;
+    list.forEach(function (P) {
+      var d = Globe.arcPathFrom(P.pr, { lift: P.lift, steps: 48 });
+      if (!d) return;
+      var el = lp[drawn++];
+      el.removeAttribute("display");
+      /* 越近越亮,久远的链条沉下去,和余烬同一个逻辑 */
+      var age = currentYear - P.l.to;
+      var op = age <= 6 ? 0.85 : Math.max(0.2, 0.5 - age / 700);
+      el.setAttribute("class", "tl-link s-" + P.l.strength);
+      el.setAttribute("d", d);
+      el.setAttribute("opacity", op.toFixed(2));
+      el.setAttribute("stroke-dashoffset", (-flowClock * 14).toFixed(1));
+    });
+    for (var i = drawn; i < lp.length; i++) lp[i].setAttribute("display", "none");
+  }
+
   /* ---------- 每帧重画 ---------- */
   function paint() {
     Globe.renderCanvas();
@@ -245,7 +288,14 @@
       hi.setAttribute("class", "tl-wave cat-" + it.w.ev.cat);
       hi.setAttribute("d", d); hi.setAttribute("opacity", it.o.toFixed(2));
     });
+    paintLinks();
     paintFlows();
+    /* 放大到贴近地表时,球缘的大气层已经在视口外,留着只会是一道假边 */
+    if (atmos) {
+      var z = Globe.zoom;
+      atmos.style.transform = "scale(" + z.toFixed(3) + ")";
+      atmos.style.opacity = z > 1.6 ? "0" : (1 - (z - 1) / 0.6).toFixed(2);
+    }
 
     placePopup();
   }
@@ -259,6 +309,16 @@
     var todays = TIMELINE_EVENTS.filter(function (ev) {
       return ev.year === currentYear && activeCats[ev.cat];
     });
+    var linkHtml = activeLinks().filter(function (P) {
+      return P.l.to === currentYear || P.l.from === currentYear;
+    }).map(function (P) {
+      var a = TIMELINE_EVENTS[byYear[P.l.from]], b = TIMELINE_EVENTS[byYear[P.l.to]];
+      return '<div class="tl-link-item s-' + P.l.strength + '">' +
+        '<span class="tl-link-strength">' + P.l.strength + '</span>' +
+        '<strong>' + P.l.from + ' ' + a.title + ' → ' + P.l.to + ' ' + b.title + '</strong>' +
+        '<p>' + P.l.note + '</p></div>';
+    }).join("");
+
     var flowHtml = activeFlows().map(function (f) {
       return '<div class="tl-flow-item kind-' + f.kind + '">' +
         '<span class="tl-flow-kind">' + f.kind + '</span>' +
@@ -267,10 +327,11 @@
         '<p>' + f.note + '</p></div>';
     }).join("");
 
-    if (!todays.length && !flowHtml) {
+    var extra = linkHtml + flowHtml;
+    if (!todays.length && !extra) {
       nowList.innerHTML = '<p class="tl-empty">这一年，世界安静得像深呼吸——拖动时间轴，去有故事的年份看看。</p>';
     } else if (!todays.length) {
-      nowList.innerHTML = flowHtml;
+      nowList.innerHTML = extra;
     } else {
       nowList.innerHTML = todays.map(function (ev) {
         var i = TIMELINE_EVENTS.indexOf(ev);
@@ -280,7 +341,7 @@
           '<strong>' + ev.title + '</strong>' +
           '<span class="tl-now-place">' + ev.city + '，' + ev.country + '</span>' +
           '<p>' + ev.summary + '</p>' + link + '</div>';
-      }).join("") + flowHtml;
+      }).join("") + extra;
       nowList.querySelectorAll(".tl-now-item").forEach(function (el) {
         el.addEventListener("click", function () {
           var i = +el.dataset.idx, ev = TIMELINE_EVENTS[i];
@@ -361,6 +422,15 @@
     });
   }
 
+  if (linkToggle) {
+    linkToggle.addEventListener("click", function () {
+      linksOn = !linksOn;
+      linkToggle.setAttribute("aria-pressed", linksOn ? "true" : "false");
+      linkToggle.classList.toggle("off", !linksOn);
+      render();
+    });
+  }
+
   render();
   requestAnimationFrame(loop);
 
@@ -371,6 +441,8 @@
     year: function () { return currentYear; },
     waves: function () { return waves; },
     flows: function () { return activeFlows(); },
+    links: function () { return activeLinks(); },
+    zoom: function (z) { Globe.setZoom(z); },
     toggleFlows: function () { flowToggle.click(); },
     globe: Globe
   };

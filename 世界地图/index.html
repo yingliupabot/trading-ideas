@@ -18,6 +18,7 @@
     <div class="tl-atmos" aria-hidden="true"></div>
     <svg id="world-map" viewBox="-120 -120 240 240" role="img"
          aria-label="可拖动旋转的地球，历史事件随年份在球面上点亮">
+      <g id="tl-links"></g>
       <g id="tl-flows"></g>
       <g id="tl-waves"></g>
       <g id="tl-markers"></g>
@@ -35,7 +36,7 @@
   </a>
   <div class="tl-heading">
     <h1>🗺 世界历史时间轴</h1>
-    <p>拖动地球，拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
+    <p>拖动旋转 · 滚轮缩放 · 拉动时间轴 —— 经济是第一批住户，政治、战争、科技、文化随后拎包入住</p>
   </div>
   <div class="tl-topbar-actions">
     <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
@@ -69,6 +70,7 @@
     <button data-cat="文化" class="tag-pill tl-cat-文化">文化</button>
     <span class="tl-filter-sep" aria-hidden="true"></span>
     <button id="tl-flow-toggle" class="tag-pill tl-flow-pill" aria-pressed="true">💸 资金流动</button>
+    <button id="tl-link-toggle" class="tag-pill tl-link-pill" aria-pressed="true">🔗 因果链</button>
   </div>
   <div class="tl-transport">
     <div class="tl-year-badge"><span id="tl-year">1720</span></div>
@@ -85,6 +87,7 @@
 <script src="map.js"></script>
 <script src="events.js"></script>
 <script src="flows.js"></script>
+<script src="links.js"></script>
 <script src="globe.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>

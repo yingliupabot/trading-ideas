@@ -12,8 +12,18 @@ var Globe = (function () {
   var R = 100;                       /* 球半径,与 viewBox 同单位 */
 
   var rot = 0, tilt = -10;           /* 经度旋转 / 视角倾角 */
+  /* 缩放上限钉在 4.5:再往上就撑不住了——英国的轮廓在原始数据里只有 54 个顶点
+     (整幅世界图宽度的 2.6%),放得更大只会看见多边形的棱角。
+     这是数据分辨率的限制,不是投影的限制,换平面地图同样难看。 */
+  var zoom = 1, ZOOM_MIN = 1, ZOOM_MAX = 4.5;
   var sinT = Math.sin(tilt * D2R), cosT = Math.cos(tilt * D2R);
   var countries = [], paths = [], landGroup = null;
+
+  function setZoom(z) {
+    zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+    if (onZoom) onZoom(zoom);
+  }
+  var onZoom = null;
 
   function setTilt(t) {
     tilt = Math.max(-75, Math.min(75, t));
@@ -79,7 +89,7 @@ var Globe = (function () {
     if (cv.clientWidth && Math.abs(cv.clientWidth - cssSize) > 1) resizeCanvas();
     var S = cv.width, half = S / 2;
     /* viewBox 是 -120..120,球半径 100 → 画布上的球半径 */
-    var k = (S / 240) * R;
+    var k = (S / 240) * R * zoom;
     cx2.clearRect(0, 0, S, S);
 
     /* 海洋:偏离中心的径向渐变,球体才有体积感 */
@@ -124,12 +134,13 @@ var Globe = (function () {
   function projectRad(lng, sinLat, cosLat, alt) {
     var l = lng - rot * D2R, cl = Math.cos(l), sl = Math.sin(l);
     var z = sinT * sinLat + cosT * cosLat * cl;        /* 朝向观察者 */
-    var r = R * (1 + (alt || 0));
+    var r = R * zoom * (1 + (alt || 0));
     var x = r * cosLat * sl;
     var y = -r * (cosT * sinLat - sinT * cosLat * cl);
     /* 表面点(alt=0)的 x²+y² 恒等于 R²,浮点误差会让地平线附近 z<0 的点
        侥幸通过轮廓判据,于是跨球连成假直线。轮廓豁免只给抬起的弧线用。 */
-    if (z < 0 && (!alt || (x * x + y * y) <= R * R)) return null;
+    var Rz = R * zoom;
+    if (z < 0 && (!alt || (x * x + y * y) <= Rz * Rz)) return null;
     return [x, y];
   }
   function visible(lngDeg, latDeg) { return project(lngDeg, latDeg, 0) !== null; }
@@ -251,13 +262,16 @@ var Globe = (function () {
     if (dragging) return;
     if (spinTarget) {
       var dl = normDelta(spinTarget.lng - rot);
-      var dt2 = (-spinTarget.lat * 0.45) - tilt;      /* 稍微仰视,别让极点顶到中间 */
+      /* 视图中心的纬度就等于 tilt:在 l=0 处 z = cos(φ - tilt),φ = tilt 时最大。
+         原来写成 -lat*0.45,对着 54°N 调用会把镜头转到 24°S——差 78 度。
+         zoom=1 时整个半球都在视野里看不出来,一放大就全是海。 */
+      var dt2 = spinTarget.lat - tilt;
       if (Math.abs(dl) < 0.4 && Math.abs(dt2) < 0.4) { spinTarget = null; }
       else { rot += dl * 0.07; setTilt(tilt + dt2 * 0.07); }
       return;
     }
     if (Math.abs(vel) > 0.002) { rot += vel; vel *= 0.94; }   /* 拖拽惯性 */
-    else if (Date.now() > idleUntil) rot += autoSpin * dt;    /* 空闲自转 */
+    else if (Date.now() > idleUntil) rot += (autoSpin / zoom) * dt;  /* 空闲自转,放大后放慢 */
   }
 
   function attachDrag(el) {
@@ -276,13 +290,21 @@ var Globe = (function () {
         moved = true;
         if (el.setPointerCapture && e.pointerId != null) el.setPointerCapture(e.pointerId);
       }
-      rot += dx * 0.28; setTilt(tilt + dy * 0.22);
-      vel = dx * 0.28; px = p.x; py = p.y;
+      var k = 0.28 / zoom;                    /* 放大后手感不该变快 */
+      rot += dx * k; setTilt(tilt + dy * (0.22 / zoom));
+      vel = dx * k; px = p.x; py = p.y;
       spinTarget = null;
       e.preventDefault();
     }
     function up() { if (!dragging) return; dragging = false; idleUntil = Date.now() + 4000; }
     function pt(e) { return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }; }
+    /* 滚轮缩放:以指数步进,快慢手感一致 */
+    el.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      setZoom(zoom * Math.exp(-e.deltaY * 0.0013));
+      idleUntil = Date.now() + 2500;
+    }, { passive: false });
+
     el.addEventListener("pointerdown", down);
     window.addEventListener("pointermove", move, { passive: false });
     window.addEventListener("pointerup", up);
@@ -299,6 +321,9 @@ var Globe = (function () {
     prepArc: prepArc, arcPathFrom: arcPathFrom, arcPointFrom: arcPointFrom,
     rotateTo: rotateTo, step: step, attachDrag: attachDrag,
     get rotation() { return rot; }, set rotation(v) { rot = v; },
-    get tilt() { return tilt; }, setTilt: setTilt
+    get tilt() { return tilt; }, setTilt: setTilt,
+    get zoom() { return zoom; }, setZoom: setZoom,
+    ZOOM_MIN: ZOOM_MIN, ZOOM_MAX: ZOOM_MAX,
+    onZoom: function (cb) { onZoom = cb; }
   };
 })();
