@@ -78,14 +78,14 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
       杀掉的点子留死因，死因也是资产。
     </div>
     <h4>已发布笔记</h4>
-    <a href="../industry/prop-trading-firms/">Prop Trading 赚钱模式</a>
-    <a href="../portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
-    <a href="../data-sources/beyond-ohlc/">OHLC 之外数据源</a>
-    <a href="../reddit-strategies/close-near-low/">Close-Near-Low 策略研读</a>
-    <a href="../papers/ml-asset-pricing-gu-kelly-xiu-2020/">ML Asset Pricing 研读</a>
-    <a href="../papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
-    <a href="../tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
-    <a href="../tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
+    <a href="industry/prop-trading-firms/">Prop Trading 赚钱模式</a>
+    <a href="portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
+    <a href="data-sources/beyond-ohlc/">OHLC 之外数据源</a>
+    <a href="reddit-strategies/close-near-low/">Close-Near-Low 策略研读</a>
+    <a href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">ML Asset Pricing 研读</a>
+    <a href="papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
+    <a href="tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
+    <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
     <h4>源码</h4>
     <a href="https://github.com/yingliupabot/trading-ideas/tree/main/trading-ideas/ideas" target="_blank" rel="noopener">🗂 catalog.json 源码</a>
   </aside>
@@ -177,13 +177,14 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
       n++;
       var st = STATUS[it.status] || [it.status, ""];
       var v = it.verdict ? (VERDICT[it.verdict] || [it.verdict, ""]) : null;
-      var title = it.note_url ? '<a class="idea-title" href="' + esc(it.note_url) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
+      var noteUrl = (it.note_url || "").replace(/^\.\.\//, "");
+      var title = noteUrl ? '<a class="idea-title" href="' + esc(noteUrl) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
       var excess = '<span class="num-na">—</span>';
       if (it.result && it.result.excess_pp != null) {
         var ep = it.result.excess_pp;
         excess = '<span class="' + (ep >= 0 ? "num-win" : "num-fail") + '">' + (ep >= 0 ? "+" : "") + ep + "pp</span>";
       }
-      var noteLink = it.note_url ? '<a href="' + esc(it.note_url) + '">笔记 →</a>' : '<span class="num-na">—</span>';
+      var noteLink = noteUrl ? '<a href="' + esc(noteUrl) + '">笔记 →</a>' : '<span class="num-na">—</span>';
       var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
       var rowCls = it.verdict === "win" ? "row-win" : (it.verdict === "fail" ? "row-fail" : "row-neutral");
       return '<tr class="' + rowCls + '">' +
