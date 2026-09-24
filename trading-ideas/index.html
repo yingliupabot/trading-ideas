@@ -8,12 +8,17 @@
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="stylesheet" href="../styles.css">
 <style>
+:root, :root[data-theme="dark"] { --neutral-bg: rgba(139, 148, 158, 0.10); }
+:root[data-theme="light"] { --neutral-bg: rgba(89, 99, 110, 0.08); }
 .table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; }
 table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 880px; }
 table.ideas th, table.ideas td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 table.ideas th { background: var(--panel); color: var(--muted); font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
 table.ideas tr:last-child td { border-bottom: none; }
-table.ideas tr:hover td { background: var(--panel); }
+table.ideas tbody tr.row-win td { background: var(--win-bg); }
+table.ideas tbody tr.row-fail td { background: var(--fail-bg); }
+table.ideas tbody tr.row-neutral td { background: var(--neutral-bg); }
+table.ideas tbody tr:hover td { filter: brightness(0.97); }
 .idea-title { font-weight: 600; }
 .idea-claim { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .idea-claim details { margin-top: 4px; }
@@ -125,7 +130,7 @@ table.ideas tr:hover td { background: var(--panel); }
         <option value="blog">博客</option>
       </select>
     </div>
-    <p class="legend"><span class="dot dot-win"></span>跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>资料/论文（仅供参考）</p>
+    <p class="legend"><span class="dot dot-win"></span>跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>待定 / 资料型</p>
 
     <div class="table-scroll">
       <table class="ideas">
@@ -179,7 +184,8 @@ table.ideas tr:hover td { background: var(--panel); }
       }
       var noteLink = it.note_url ? '<a href="' + esc(it.note_url) + '">笔记 →</a>' : '<span class="num-na">—</span>';
       var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
-      return "<tr>" +
+      var rowCls = it.verdict === "win" ? "row-win" : (it.verdict === "fail" ? "row-fail" : "row-neutral");
+      return '<tr class="' + rowCls + '">' +
         "<td>" + title + '<div class="idea-claim">' + esc(it.claim) + detail + "</div></td>" +
         "<td>" + esc(it.source_name) + "</td>" +
         "<td>" + esc(KIND[it.kind] || it.kind) + "</td>" +
