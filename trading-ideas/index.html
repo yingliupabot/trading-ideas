@@ -8,8 +8,8 @@
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="stylesheet" href="../styles.css">
 <style>
-:root, :root[data-theme="dark"] { --neutral-bg: rgba(139, 148, 158, 0.10); }
-:root[data-theme="light"] { --neutral-bg: rgba(89, 99, 110, 0.08); }
+:root, :root[data-theme="dark"] { --neutral-bg: rgba(139, 148, 158, 0.28); }
+:root[data-theme="light"] { --neutral-bg: rgba(89, 99, 110, 0.20); }
 .table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; }
 table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 880px; }
 table.ideas th, table.ideas td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -31,7 +31,7 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
 .pill.st-killed { background: var(--fail-bg); border-color: var(--fail-border); color: var(--red); }
 .pill.v-win { background: var(--win-bg); border-color: var(--win-border); color: var(--green); }
 .pill.v-fail { background: var(--fail-bg); border-color: var(--fail-border); color: var(--red); }
-.pill.v-inc { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pill.v-inc { background: var(--neutral-bg); border-color: var(--border); color: var(--muted); }
 .num-win { color: var(--green); font-weight: 600; white-space: nowrap; }
 .num-fail { color: var(--red); font-weight: 600; white-space: nowrap; }
 .num-na { color: var(--muted); }
