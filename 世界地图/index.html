@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="timeline.css">
 <link rel="stylesheet" href="chart.css">
 <link rel="stylesheet" href="eras.css">
+<link rel="stylesheet" href="scroll.css">
 </head>
 <body class="tl-immersive">
 
@@ -176,6 +177,10 @@
 <script src="countries.js"></script>
 <script src="eras.js"></script>
 <script src="globe.js"></script>
+<!-- GSAP 只做动效糖:CDN 直引 pin 版本,不引入构建。
+     加载失败时所有动画调用都有 window.gsap 守卫,页面照常工作。 -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="scroll.js"></script>
 <script src="timeline.js"></script>
 <script src="../theme.js"></script>
 <script>

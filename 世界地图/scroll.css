@@ -1,0 +1,91 @@
+/* 世界历史时间轴 · 清明上河图式手卷
+ *
+ * 国家纸卷的下半截:一条横向可滚的时间长河。
+ * 卷轴长度随事件数伸缩(宽 = 2*PAD + n*SEG),由 scroll.js 算好;
+ * 这里只管它在纸上的位置、纸质感和滚动体验。
+ * 墨色走 currentColor —— .tl-handscroll 上 color: var(--ink),
+ * 深浅主题自动成立,不用两套颜色。
+ */
+
+.tl-handscroll {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 302px;
+  z-index: 5;
+  overflow-x: auto;
+  overflow-y: hidden;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, rgba(90, 68, 40, 0.10), transparent 26%),
+    var(--paper-1);
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -8px 22px -14px rgba(60, 42, 20, 0.45);
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-faint) transparent;
+}
+.tl-handscroll::-webkit-scrollbar { height: 8px; }
+.tl-handscroll::-webkit-scrollbar-thumb {
+  background: var(--ink-faint);
+  border-radius: 4px;
+}
+.tl-handscroll::-webkit-scrollbar-track { background: transparent; }
+
+/* 两层:远山卷云在下(视差慢半拍),河与小景在上 */
+.tl-handscroll svg { display: block; }
+.tl-hs-bg {
+  position: absolute;
+  left: 0; top: 0;
+  pointer-events: none;
+}
+.tl-hs-fg { position: relative; }
+
+.tl-handscroll svg text {
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+  fill: currentColor;
+}
+
+/* 还没点亮的词条:小景淡下去,像没上色的底稿 */
+.tl-hs-scene.st-dim { opacity: 0.42; }
+.tl-hs-scene { transition: opacity 0.2s ease; }
+.tl-hs-scene:hover { opacity: 0.82; }
+
+/* 空国家:河照流,只是没留下小景 */
+.tl-hs-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  text-align: center;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--muted);
+}
+
+/* 手卷占了纸的下半截,国名题签让到左上角,别被河盖住 */
+.tl-scroll-paper:has(.tl-handscroll) .tl-scroll-label {
+  top: 14px;
+  bottom: auto;
+}
+
+@media (max-width: 760px) {
+  .tl-handscroll { height: 242px; }
+  .tl-scroll-paper:has(.tl-handscroll) .tl-scroll-label {
+    top: 10px;
+    left: 14px;
+  }
+}
+
+/* 融形:卷轴铺满整张纸,河带垂直居中,内容裁进国家的轮廓里。
+   纸的底色由 #tl-scroll-paper 给,卷自己的底和顶边线在这里收掉,免得双层纸。
+   背景层跟着垂直居中(H=300,见 scroll.js)。 */
+.tl-handscroll.in-shape {
+  top: 0; bottom: 0; height: auto;
+  display: flex; align-items: center;
+  background: transparent; border-top: none; box-shadow: none;
+}
+.tl-handscroll.in-shape .tl-hs-fg { flex: none; }
+.tl-handscroll.in-shape .tl-hs-bg { top: calc(50% - 150px); }
+/* 融形时卷首题签会被画框圆角裁得别扭 —— 画框自己就是题签,藏掉 */
+.tl-handscroll.in-shape .tl-hs-head { display: none; }

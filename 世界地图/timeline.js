@@ -90,14 +90,29 @@
   var view = "globe", countryNow = null, cmap = null, cmarks = [], enterTimer = 0;
   var morphCv = document.getElementById("tl-morph");
   var morphCx = morphCv.getContext("2d");
-  var morphRAF = 0, zoomRAF = 0;
+  var morphRAF = 0, zoomRAF = 0, morphTween = null, zoomTween = null;
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+  /* 缩放 tween 和 rAF 是两套油门,熄火要一起熄 */
+  function stopZoom() {
+    cancelAnimationFrame(zoomRAF);
+    if (zoomTween) { zoomTween.kill(); zoomTween = null; }
+  }
 
   /* 缩放要走过去,不能跳。setZoom 本身是瞬时的 —— 直接调用的话
      "推近"根本不是推近,是一帧之内换了个倍率。 */
   function tweenZoom(to, ms, then) {
-    cancelAnimationFrame(zoomRAF);
+    stopZoom();
     var from = Globe.zoom, t0 = 0;
     if (Math.abs(to - from) < 0.01) { if (then) then(); return; }
+    if (window.gsap && !reducedMotion()) {
+      var p = { z: from };
+      zoomTween = gsap.to(p, { z: to, duration: ms / 1000, ease: "power3.out",
+        onUpdate: function () { Globe.setZoom(p.z); },
+        onComplete: function () { zoomTween = null; if (then) then(); } });
+      return;
+    }
     zoomRAF = requestAnimationFrame(function step(now) {
       if (!t0) t0 = now;
       var k = Math.min(1, (now - t0) / ms);
@@ -186,16 +201,17 @@
     g.appendChild(hit); g.appendChild(halo); g.appendChild(glow); g.appendChild(dot);
     g.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (drag.didDrag()) return;              /* 拖完球别误触发弹窗 */
-      var c = at(ev, i);
-      openIdx = i; fillPopup(ev); Globe.rotateTo(c[0], c[1]); paint();
+      if (drag.didDrag()) return;              /* 拖完球别误触发 */
+      /* 点标记就是点这个国家:球面上点哪儿(陆地还是标记)都进卷宗,
+         标记的透明热区别再把国家挡住。弹窗只留给侧栏事件列表。 */
+      enterCountry(COUNTRY_EN[ev.country] || ev.country);
     });
     markerLayer.appendChild(g);
     return { ev: ev, g: g, dot: dot, halo: halo, glow: glow };
   });
   svg.addEventListener("click", function () { openIdx = null; popup.hidden = true; });
-  /* 注意:开卷宗的点击监听在下面单独注册,两者都会收到事件——
-     先关弹窗再开卷宗,顺序无所谓,互不干扰。 */
+  /* 注意:点标记直接进卷宗(和点陆地一样),弹窗只留给侧栏事件列表——
+     球面上点哪儿都进国家,不会再被标记挡住。 */
 
   /* ---------- 弹窗 ---------- */
   function fillPopup(ev) {
@@ -488,7 +504,154 @@
     return [Math.max(320, Math.round(r.width)), Math.max(220, Math.round(r.height))];
   }
 
+  /* ---------- 潜水:地图 → 手卷 ----------
+   * 点进国家,纸上先只亮整张地图,大而完整;停一拍,镜头贴进去 ——
+   * 海、邻国、标记淡掉,陆地只剩一道墨线;然后这道墨线亲手拉伸成一道横向的
+   * 卷轴画框,时间长河从头到尾就长在这个变形的形状里:你亲眼看着地图变成卷。
+   * 返回时反向:卷沉下去,画框缩回法国轮廓、重新填上颜色,再卷回球。
+   * 没 GSAP 或用户要少动效,就摆回上下结构,不潜水。 */
+  var diveTl = null, dived = false;
+  var morphT = { v: 0 }, morphSrc = null, morphDst = null;
+  function stopDive() {
+    if (diveTl) { diveTl.kill(); diveTl = null; }
+  }
+  /* 潜水留下的 inline 痕迹(缩放、淡入淡出、墨线框、裁剪卷),一次清干净 */
+  function clearDiveProps() {
+    if (!window.gsap) return;
+    var nodes = [cmapSvg,
+      document.getElementById("tl-cmap-sea"),
+      document.getElementById("tl-cmap-neighbors"),
+      document.getElementById("tl-cmap-marks"),
+      document.getElementById("tl-cmap-land"),
+      document.querySelector(".tl-scroll-label")].filter(Boolean);
+    gsap.set(nodes, { clearProps: "all" });
+  }
+  /* 沿路径等弧长采 n 个点 */
+  function samplePath(pathEl, n) {
+    try {
+      var L = pathEl.getTotalLength();
+      if (!isFinite(L) || L <= 0) return null;
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var p = pathEl.getPointAtLength(L * i / n);
+        pts.push([p.x, p.y]);
+      }
+      return pts;
+    } catch (e) { return null; }
+  }
+  /* 目标:一道横向卷轴画框(体育场形),居中,和河带同高。
+     起点转到离法国轮廓起点最近处、方向对齐,变形不拧麻花 */
+  function capsulePoints(w, h, n, src) {
+    var CW = Math.min(w * 0.8, 760), CH = 300;
+    var cx = w / 2, cy = h / 2, r = CH / 2;
+    var x0 = cx - CW / 2 + r, x1 = cx + CW / 2 - r, yT = cy - r, yB = cy + r;
+    var straight = x1 - x0, arc = Math.PI * r, per = 2 * straight + 2 * arc;
+    function pt(s) {
+      var d = s * per, a;
+      if (d < straight) return [x0 + d, yT];
+      d -= straight;
+      if (d < arc) { a = -Math.PI / 2 + d / arc * Math.PI; return [x1 + r * Math.cos(a), cy + r * Math.sin(a)]; }
+      d -= arc;
+      if (d < straight) return [x1 - d, yB];
+      d -= straight;
+      a = Math.PI / 2 + d / arc * Math.PI; return [x0 + r * Math.cos(a), cy + r * Math.sin(a)];
+    }
+    var pts = [];
+    for (var i = 0; i < n; i++) pts.push(pt(i / n));
+    var bi = 0, bd = Infinity;
+    for (var j = 0; j < n; j++) {
+      var dx = pts[j][0] - src[0][0], dy = pts[j][1] - src[0][1], dd = dx * dx + dy * dy;
+      if (dd < bd) { bd = dd; bi = j; }
+    }
+    var rot = pts.slice(bi).concat(pts.slice(0, bi));
+    function sarea(p) {
+      var s = 0;
+      for (var k = 0; k < p.length; k++) { var a2 = p[k], b2 = p[(k + 1) % p.length]; s += a2[0] * b2[1] - b2[0] * a2[1]; }
+      return s;
+    }
+    if (sarea(src) * sarea(rot) < 0) {
+      var rev = [rot[0]];
+      for (var k = rot.length - 1; k >= 1; k--) rev.push(rot[k]);
+      return rev;
+    }
+    return rot;
+  }
+  function interpD(a, b, t) {
+    var d = "M" + (a[0][0] + (b[0][0] - a[0][0]) * t).toFixed(1) + "," +
+      (a[0][1] + (b[0][1] - a[0][1]) * t).toFixed(1);
+    for (var i = 1; i < a.length; i++) {
+      d += "L" + (a[i][0] + (b[i][0] - a[i][0]) * t).toFixed(1) + "," +
+        (a[i][1] + (b[i][1] - a[i][1]) * t).toFixed(1);
+    }
+    return d + "Z";
+  }
+  /* 变形写到三处:墨线框本身 + 卷里前景/背景两道裁剪,三者永远是同一个形状 */
+  function applyMorph() {
+    var d = interpD(morphSrc, morphDst, morphT.v);
+    var land = document.getElementById("tl-cmap-land");
+    if (land) land.setAttribute("d", d);
+    var cpf = document.querySelector("#tl-hs-cpf path");
+    if (cpf) cpf.setAttribute("d", d);
+    var cpb = document.querySelector("#tl-hs-cpb path");
+    if (cpb) cpb.setAttribute("d", d);
+  }
+  function playDive(hsWrap) {
+    stopDive();
+    dived = false;
+    var label = document.querySelector(".tl-scroll-label");
+    if (!window.gsap || reducedMotion()) {
+      hsWrap.style.visibility = "visible";
+      Scroll.play(hsWrap);
+      return;
+    }
+    var sea = document.getElementById("tl-cmap-sea"),
+        nb = document.getElementById("tl-cmap-neighbors"),
+        marks = document.getElementById("tl-cmap-marks"),
+        land = document.getElementById("tl-cmap-land");
+    morphSrc = samplePath(land, 140);
+    var box = paperBox();
+    morphDst = morphSrc ? capsulePoints(box[0], box[1], 140, morphSrc) : null;
+    morphT.v = 0;
+    if (land) land.dataset.origD = land.getAttribute("d");
+    gsap.set(hsWrap, { visibility: "visible", opacity: 0 });
+    gsap.set([cmapSvg, hsWrap], { scale: 1, transformOrigin: "50% 50%" });
+    diveTl = gsap.timeline({ onComplete: function () { diveTl = null; dived = true; } });
+    if (morphSrc && morphDst) {
+      diveTl
+        .to({}, { duration: 0.75 })                                  /* 落定:先看一眼整张地图 */
+        .to("#tl-cmap-marks .ring",                                 /* 事件亮两下:要去的就是这儿 */
+          { scale: 1.4, transformOrigin: "50% 50%", duration: 0.38,
+            yoyo: true, repeat: 1, ease: "sine.inOut", stagger: 0.14 }, "<")
+        /* 贴进去:海、邻国、标记淡掉,陆地只剩墨线 */
+        .to([cmapSvg, hsWrap], { scale: 1.12, duration: 0.6, ease: "power2.inOut" })
+        .to([sea, nb, marks].filter(Boolean), { opacity: 0, duration: 0.5 }, "<")
+        .to(land, { fillOpacity: 0, duration: 0.5 }, "<")
+        /* 法国亲手变成卷:轮廓拉伸成画框,河一直长在变形的形状里 */
+        .to(morphT, { v: 1, duration: 1.15, ease: "power2.inOut", onUpdate: applyMorph,
+            onStart: function () {
+              gsap.set(cmapSvg, { zIndex: 6, pointerEvents: "none" });
+              gsap.to(hsWrap, { opacity: 1, duration: 0.85, ease: "power2.out" });
+              Scroll.play(hsWrap);
+            } });
+    } else {
+      /* 轮廓退化采不出点:退回淡入,不玩变形 */
+      diveTl
+        .to([sea, nb, marks].filter(Boolean), { opacity: 0, duration: 0.5 })
+        .to(land, { fillOpacity: 0, duration: 0.5 }, "<")
+        .to(hsWrap, { opacity: 1, duration: 0.9, ease: "power2.out",
+            onStart: function () {
+              gsap.set(cmapSvg, { zIndex: 6, pointerEvents: "none" });
+              Scroll.play(hsWrap);
+            } });
+    }
+    if (label) diveTl.to(label, { opacity: 0, duration: 0.4 }, "<");
+  }
+
   function buildCountryMap(en) {
+    stopDive();
+    dived = false;
+    /* 上一轮潜水可能把 inline 痕迹留在地图、墨线和题签上,清掉,从干净的地图开始 */
+    clearDiveProps();
     var box = paperBox();
     cmapSvg.setAttribute("viewBox", "0 0 " + box[0] + " " + box[1]);
     cmap = Globe.countryMap(en, box[0], box[1]);
@@ -527,6 +690,36 @@
       cmarks.push({ ev: ev, g: g });
     });
     paintCountryMarks();
+
+    /* 手卷:先藏好,等潜水到位再浮出来。事件按年份排,卷轴长度随事件数伸缩;
+       点击小景跳到那一年。因果丝只连本国卷轴里的两段 —— 1720→1789
+       那条"同一个陷阱走两遍"的丝,就长在这条河上。
+       空国家不潜水:上下结构直接摆出来,和以前一样。 */
+    (function () {
+      var paper = document.getElementById("tl-scroll-paper");
+      var evs = ENTRIES.filter(function (e) {
+        return e.place && typeof e.year === "number" &&
+          (COUNTRY_EN[e.place.country] || e.place.country) === en;
+      }).sort(function (a, b) { return a.year - b.year; });
+      var ids = {};
+      evs.forEach(function (e) { ids[e.id] = true; });
+      var list = evs.map(function (e) {
+        return {
+          id: e.id, year: e.year, city: e.place.city, cat: e.cat,
+          title: e.title, status: e.status || "点亮",
+          links: (e.links || []).filter(function (l) { return l.type === "因果" && ids[l.to]; })
+        };
+      });
+      var wrap = Scroll.build(paper, list, {
+        onPick: function (ev) { setYear(ev.year, true); },
+        defer: list.length > 0,
+        /* 融形:卷的内容裁进国家轮廓里,河在形状里流 —— 要地图几何,也要动效开着;
+           动效关了就还是上下结构 */
+        inShape: !!cmap && list.length > 0 && !!window.gsap && !reducedMotion(),
+        shapeD: cmap ? cmap.d : null
+      });
+      if (list.length) playDive(wrap);
+    })();
   }
 
   /* 拖时间轴时这张纸上的标记跟着亮灭——国家视图里年份依然有意义 */
@@ -600,6 +793,7 @@
      把真球和纸藏起来,量完再放动画 —— 否则纸的尺寸是按旧版面算的。 */
   function runMorph(en, back, done) {
     cancelAnimationFrame(morphRAF);
+    if (morphTween) { morphTween.kill(); morphTween = null; }
     var disc, paper;
     if (back) {
       paper = paperRect();                       /* 纸还在当前视图里 */
@@ -618,9 +812,19 @@
     var dpr = sizeMorphCanvas();
     morphCv.hidden = false;
     /* 说了要少动效就别摊了,直接给结果 */
-    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var reduce = reducedMotion();
     var DUR = reduce ? 1 : 900, t0 = 0;
     prep.draw(morphCx, back ? 1 : 0, dpr);
+    if (window.gsap && !reduce) {
+      /* 球摊成纸不是匀速的:起手沉、中间脆、落笔稳,和毛笔一个脾气 */
+      var proxy = { k: back ? 1 : 0 };
+      morphTween = gsap.to(proxy, {
+        k: back ? 0 : 1, duration: 1.05, ease: "power2.inOut",
+        onUpdate: function () { prep.draw(morphCx, proxy.k, dpr); },
+        onComplete: function () { morphTween = null; done(); }
+      });
+      return prep;
+    }
     morphRAF = requestAnimationFrame(function step(now) {
       if (!t0) t0 = now;
       var k = Math.min(1, (now - t0) / DUR);
@@ -668,7 +872,7 @@
       });
       /* 角上那颗是"你在这儿"的定位器,要看得见整个世界。
          此刻真球已经藏起来了,换倍率看不见,不用补间 */
-      cancelAnimationFrame(zoomRAF);
+      stopZoom();
       Globe.setZoom(1);
     }, 560);
   }
@@ -679,19 +883,60 @@
     var en = countryNow;
     countryNow = null;
     backGlobe.hidden = true;
-    /* 纸卷回球:球要先站回中间、也回到摊开时那个 zoom,两头才接得上 */
-    cancelAnimationFrame(zoomRAF);
-    Globe.setZoom(2.6);
-    runMorph(en, true, function () {
-      view = "globe";
-      scrollEl.hidden = true;
-      document.body.classList.remove("morphing");
-      requestAnimationFrame(function () {
-        morphCv.hidden = true;
-        /* 球是在 2.6 倍上接住的,再退回来 —— 直接设 1 会"啪"地跳一下 */
-        tweenZoom(1, 620);
+    stopDive();
+    var paper = document.getElementById("tl-scroll-paper");
+    var hs = paper.querySelector(".tl-handscroll");
+
+    function finish() {
+      dived = false;
+      /* 手卷的氛围循环(船晃、云飘、水流)跟着走,不留孤魂 */
+      if (hs && hs._hsTweens) hs._hsTweens.forEach(function (t) { t.kill(); });
+      /* 变形过的轮廓先接回原始 d,再清 inline 痕迹,下次进来从干净的地图开始 */
+      var landEl = document.getElementById("tl-cmap-land");
+      if (landEl && landEl.dataset.origD) {
+        landEl.setAttribute("d", landEl.dataset.origD);
+        delete landEl.dataset.origD;
+      }
+      morphT.v = 0; morphSrc = null; morphDst = null;
+      /* inline 痕迹清掉,下次进来从干净的地图开始 */
+      if (window.gsap) {
+        clearDiveProps();
+        if (hs) gsap.set(hs, { clearProps: "all" });
+      }
+      /* 纸卷回球:球要先站回中间、也回到摊开时那个 zoom,两头才接得上 */
+      stopZoom();
+      Globe.setZoom(2.6);
+      runMorph(en, true, function () {
+        view = "globe";
+        scrollEl.hidden = true;
+        document.body.classList.remove("morphing");
+        requestAnimationFrame(function () {
+          morphCv.hidden = true;
+          /* 球是在 2.6 倍上接住的,再退回来 —— 直接设 1 会"啪"地跳一下 */
+          tweenZoom(1, 620);
+        });
       });
-    });
+    }
+
+    /* 浮出来:卷先沉下去,画框缩回法国轮廓、重新填上颜色,海和邻国浮回来,再卷 */
+    if (window.gsap && !reducedMotion() && dived && hs) {
+      var revTl = gsap.timeline({ onComplete: finish });
+      revTl.to(hs, { opacity: 0, duration: 0.4, ease: "power2.in" });
+      if (morphSrc && morphDst) {
+        revTl.to(morphT, { v: 0, duration: 0.9, ease: "power2.inOut", onUpdate: applyMorph }, "<+0.1");
+      }
+      revTl
+        .to([cmapSvg, hs], { scale: 1, duration: 0.6, ease: "power2.inOut" }, "<")
+        .to([document.getElementById("tl-cmap-sea"),
+             document.getElementById("tl-cmap-neighbors"),
+             document.getElementById("tl-cmap-marks")].filter(Boolean),
+            { opacity: 1, duration: 0.5 }, "<+0.2")
+        .to("#tl-cmap-land", { fillOpacity: 1, duration: 0.5 }, "<")
+        .to(".tl-scroll-label", { opacity: 1, duration: 0.4 }, "<");
+    } else {
+      /* 没潜过水(动效关了、空国家、或还在半路):直接收拾好走人 */
+      finish();
+    }
   }
 
   backGlobe.addEventListener("click", exitCountry);
@@ -960,6 +1205,13 @@
     });
     if (y < prev) { waves.length = 0; openIdx = null; }   /* 往回拖就清场 */
     render();
+    /* 跨年份跳过去时,底部的年份牌跟着数过去,不"啪"地闪一下 */
+    if (animate && window.gsap && !reducedMotion() && Math.abs(y - prev) > 1) {
+      var badge = { v: prev };
+      gsap.to(badge, { v: y, duration: Math.min(0.9, 0.25 + Math.abs(y - prev) / 120),
+        ease: "power2.out",
+        onUpdate: function () { yearBadge.textContent = fmtYear(Math.round(badge.v)); } });
+    }
   }
 
   /* ---------- 渲染循环 ---------- */
