@@ -3,10 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trading Ideas · 交易笔记</title>
+<title>点子库 · Trading Ideas</title>
 <script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link rel="stylesheet" href="../styles.css">
+<style>
+.table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; }
+table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 880px; }
+table.ideas th, table.ideas td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.ideas th { background: var(--panel); color: var(--muted); font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
+table.ideas tr:last-child td { border-bottom: none; }
+table.ideas tr:hover td { background: var(--panel); }
+.idea-title { font-weight: 600; }
+.idea-claim { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.idea-claim details { margin-top: 4px; }
+.idea-claim summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.idea-claim details p { margin: 6px 0 0; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; white-space: nowrap; border: 1px solid var(--border); color: var(--muted); }
+.pill.st-backlog { border-color: var(--border); }
+.pill.st-progress { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pill.st-published { background: var(--win-bg); border-color: var(--win-border); color: var(--green); }
+.pill.st-killed { background: var(--fail-bg); border-color: var(--fail-border); color: var(--red); }
+.pill.v-win { background: var(--win-bg); border-color: var(--win-border); color: var(--green); }
+.pill.v-fail { background: var(--fail-bg); border-color: var(--fail-border); color: var(--red); }
+.pill.v-inc { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.num-win { color: var(--green); font-weight: 600; white-space: nowrap; }
+.num-fail { color: var(--red); font-weight: 600; white-space: nowrap; }
+.num-na { color: var(--muted); }
+.filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.filter-row select { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.stats-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 2; }
+.stats-box b { font-size: 18px; }
+.rule-box { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.9; }
+</style>
 </head>
 <body>
 <nav class="navbar">
@@ -16,7 +45,6 @@
     <div class="nav-links">
       <a href="../index.html">首页</a>
       <a href="index.html" class="active">Trading Ideas</a>
-      <a href="ideas/">点子库</a>
       <a href="../世界地图/" target="_blank" rel="noopener">世界地图</a>
       <a href="../notes.html">读书笔记</a>
     </div>
@@ -35,7 +63,15 @@
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <h4>笔记</h4>
+    <h4>点子库</h4>
+    <div class="stats-box" id="stats">加载中…</div>
+    <div class="rule-box">
+      铁律：动手前先查表。<br>
+      表里有的 → 跳过，不重复扒。<br>
+      表里没有的 → 新增一条 backlog，再开工。<br>
+      杀掉的点子留死因，死因也是资产。
+    </div>
+    <h4>已发布笔记</h4>
     <a href="industry/prop-trading-firms/">Prop Trading 赚钱模式</a>
     <a href="portfolio/momentum-regime-overlay/">动量熊市 Overlay</a>
     <a href="data-sources/beyond-ohlc/">OHLC 之外数据源</a>
@@ -44,103 +80,142 @@
     <a href="papers/momentum-jegadeesh-titman-1993/">Buying Winners 研读</a>
     <a href="tradingview-pine-scripts/intrabar-profile/">Intrabar Profile 研读</a>
     <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
-    <h4>工具</h4>
-    <a href="ideas/">🗂 点子库</a>
+    <h4>源码</h4>
+    <a href="https://github.com/yingliupabot/trading-ideas/tree/main/trading-ideas/ideas" target="_blank" rel="noopener">🗂 catalog.json 源码</a>
   </aside>
 
   <main class="content">
     <div class="top">
-      <h1>Trading Ideas</h1>
-      <p class="sub">交易脚本研读与想法记录，按时间倒序。</p>
+      <h1>点子库</h1>
+      <p class="sub">TradingView、论文、博客、Reddit——所有点子的唯一入口。已发布的研读笔记也在表里，点「笔记 →」进入。一个个扒，扒过的留记录，没扒的排队。</p>
     </div>
 
     <div class="search-wrap">
-      <input id="search" type="search" placeholder="搜索标题、tag 或关键字…" autocomplete="off">
+      <input id="search" type="search" placeholder="搜索标题、claim、tag 或备注…" autocomplete="off">
     </div>
-    <p class="legend"><span class="dot dot-win"></span>策略跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>策略没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>资料/论文（仅供参考）</p>
-
-    <div id="post-list">
-      <a class="post-card" data-search="prop trading 自营交易 做市商 jane street citadel securities ftmo topstep 考试费 drw point72 two sigma meta-edge 行业 赚钱模式 挑战" href="industry/prop-trading-firms/">
-        <div class="post-meta">
-          <span class="date">2026-09-20</span>
-          <span class="tag-pill">industry</span>
-          <span class="tag-pill">prop-trading</span>
-        </div>
-        <h3>Prop Trading 到底有多少种？一张赚钱模式地图</h3>
-        <p>“prop trading”一词下面是五种完全不同的生意：顶级做市商赚价差、零售公司赚考试费、交易台赚交易员组合、真自营赚方向+永久资本。存在不等于参与者赚钱。</p>
-      </a>
-      <a class="post-card verdict-win" data-search="动量 熊市 overlay regime 自研 策略 行业轮动 top3 跑赢 spy portfolio momentum strategy" href="portfolio/momentum-regime-overlay/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">strategy</span>
-          <span class="tag-pill">momentum</span>
-          <span class="tag-pill">portfolio</span>
-        </div>
-        <h3>动量熊市 Overlay：第一个双维度跑赢 SPY 的自研策略</h3>
-        <p>34 次测试后的第一个达标者：累计 +387.81% vs SPY +366.94%，Sharpe 0.966 vs 0.911。熊市时轮动进动量 top3 行业，附全部代码与数据。</p>
-      </a>
-      <a class="post-card" data-search="ohlc 之外 数据源 tick 订单簿 期权链 资金费率 dark pool 情绪 另类数据 免费 binance fred" href="data-sources/beyond-ohlc/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">data</span>
-          <span class="tag-pill">alternative-data</span>
-        </div>
-        <h3>OHLC 之外：散户可用的数据源地图</h3>
-        <p>tick/订单簿、期权链、资金费率、dark pool、情绪与另类数据全景调研，附免费获取渠道和散户实操清单。</p>
-      </a>
-      <a class="post-card verdict-fail" data-search="close near low 均值回归 研读 reddit strategy algotrading 反弹 日线 range pct close" href="reddit-strategies/close-near-low/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">reddit</span>
-          <span class="tag-pill">strategy</span>
-        </div>
-        <h3>Close-Near-Low 均值回归策略研读</h3>
-        <p>r/algotrading 策略帖：收盘落在当日区间底部 20% 则次日做多，附 SPY 回测验证与成本警示。</p>
-      </a>
-      <a class="post-card" data-search="empirical asset pricing via machine learning 研读 paper academic machine-learning gu kelly xiu 神经网络 选股 横截面" href="papers/ml-asset-pricing-gu-kelly-xiu-2020/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">machine-learning</span>
-        </div>
-        <h3>Empirical Asset Pricing via Machine Learning 研读</h3>
-        <p>Gu-Kelly-Xiu 2020：94 个特征预测个股收益的 ML 方法赛马，附实证结果与 Avramov 反驳。</p>
-      </a>
-      <a class="post-card" data-search="returns to buying winners and selling losers 研读 paper academic momentum 动量 jegadeesh titman 因子 1993" href="papers/momentum-jegadeesh-titman-1993/">
-        <div class="post-meta">
-          <span class="date">2026-09-18</span>
-          <span class="tag-pill">paper</span>
-          <span class="tag-pill">academic</span>
-          <span class="tag-pill">momentum</span>
-        </div>
-        <h3>Returns to Buying Winners and Selling Losers 研读</h3>
-        <p>Jegadeesh &amp; Titman 1993 动量开山之作：买入过去赢家、卖出过去输家，附实证结果与批评梳理。</p>
-      </a>
-      <a class="post-card verdict-fail" data-search="intrabar profile 研读 tradingview pine-script kiosefftrading kioseff trading 成交量 分布 poc 价值区 吸收 失衡 回测" href="tradingview-pine-scripts/intrabar-profile/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Intrabar Profile 研读</h3>
-        <p>KioseffTrading 的 K 线内成交量/Delta 分布:低级别数据重建每根 K 线的 profile + POC/价值区,附 Python 复刻与演示回测。</p>
-      </a>
-      <a class="post-card verdict-fail" data-search="volume delta footprint map 研读 tradingview pine-script zeiierman 成交量 delta 足迹图 bid ask poc vah val 回测" href="tradingview-pine-scripts/volume-delta-footprint/">
-        <div class="post-meta">
-          <span class="date">2026-09-17</span>
-          <span class="tag-pill">tradingview</span>
-          <span class="tag-pill">pine-script</span>
-        </div>
-        <h3>Volume Delta Footprint Map 研读</h3>
-        <p>Zeiierman 的成交量 Delta 足迹图:逐笔 bid/ask 拆解 + POC/VAH/VAL 水平线,附概念回测验证。</p>
-      </a>
+    <div class="filter-row">
+      <select id="f-status">
+        <option value="">全部状态</option>
+        <option value="backlog">待扒</option>
+        <option value="in_progress">扒取中</option>
+        <option value="published">已发布</option>
+        <option value="killed">已杀</option>
+      </select>
+      <select id="f-source">
+        <option value="">全部来源</option>
+        <option value="tradingview">TradingView</option>
+        <option value="reddit">Reddit</option>
+        <option value="paper">论文</option>
+        <option value="blog">博客</option>
+        <option value="self">自研</option>
+      </select>
+      <select id="f-verdict">
+        <option value="">全部结论</option>
+        <option value="win">跑赢 baseline</option>
+        <option value="fail">没跑赢</option>
+        <option value="inconclusive">难定论</option>
+        <option value="none">资料型（无回测）</option>
+      </select>
+      <select id="f-kind">
+        <option value="">全部类型</option>
+        <option value="strategy">策略</option>
+        <option value="paper">论文</option>
+        <option value="data">数据</option>
+        <option value="industry">行业</option>
+        <option value="blog">博客</option>
+      </select>
     </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的笔记,换个关键词试试。</p>
+    <p class="legend"><span class="dot dot-win"></span>跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>资料/论文（仅供参考）</p>
 
-    <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+    <div class="table-scroll">
+      <table class="ideas">
+        <thead>
+          <tr><th>点子</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>超额收益</th><th>笔记</th></tr>
+        </thead>
+        <tbody id="idea-body">
+          <tr><td colspan="7" style="color:var(--muted)">加载中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p>
+
+    <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>
 </div>
 <script src="../theme.js"></script>
+<script>
+(function () {
+  var STATUS = { backlog: ["待扒", "st-backlog"], in_progress: ["扒取中", "st-progress"], published: ["已发布", "st-published"], killed: ["已杀", "st-killed"] };
+  var KIND = { strategy: "策略", paper: "论文", data: "数据", industry: "行业", blog: "博客" };
+  var VERDICT = { win: ["跑赢", "v-win"], fail: ["没跑赢", "v-fail"], inconclusive: ["难定论", "v-inc"] };
+  var ideas = [];
+
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+  function render() {
+    var q = (document.getElementById("search").value || "").toLowerCase();
+    var fs = document.getElementById("f-status").value;
+    var fo = document.getElementById("f-source").value;
+    var fv = document.getElementById("f-verdict").value;
+    var fk = document.getElementById("f-kind").value;
+    var body = document.getElementById("idea-body");
+    var n = 0;
+    var html = ideas.map(function (it) {
+      if (fs && it.status !== fs) return "";
+      if (fo && it.source !== fo) return "";
+      if (fk && it.kind !== fk) return "";
+      if (fv === "none" && it.verdict !== null) return "";
+      if (fv && fv !== "none" && it.verdict !== fv) return "";
+      var hay = (it.title + " " + it.claim + " " + (it.tags || []).join(" ") + " " + (it.notes || "") + " " + (it.aliases || []).join(" ")).toLowerCase();
+      if (q && hay.indexOf(q) < 0) return "";
+      n++;
+      var st = STATUS[it.status] || [it.status, ""];
+      var v = it.verdict ? (VERDICT[it.verdict] || [it.verdict, ""]) : null;
+      var title = it.note_url ? '<a class="idea-title" href="' + esc(it.note_url) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
+      var excess = '<span class="num-na">—</span>';
+      if (it.result && it.result.excess_pp != null) {
+        var ep = it.result.excess_pp;
+        excess = '<span class="' + (ep >= 0 ? "num-win" : "num-fail") + '">' + (ep >= 0 ? "+" : "") + ep + "pp</span>";
+      }
+      var noteLink = it.note_url ? '<a href="' + esc(it.note_url) + '">笔记 →</a>' : '<span class="num-na">—</span>';
+      var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
+      return "<tr>" +
+        "<td>" + title + '<div class="idea-claim">' + esc(it.claim) + detail + "</div></td>" +
+        "<td>" + esc(it.source_name) + "</td>" +
+        "<td>" + esc(KIND[it.kind] || it.kind) + "</td>" +
+        '<td><span class="pill ' + st[1] + '">' + st[0] + "</span></td>" +
+        (v ? '<td><span class="pill ' + v[1] + '">' + v[0] + "</span></td>" : '<td><span class="num-na">—</span></td>') +
+        "<td>" + excess + "</td>" +
+        "<td>" + noteLink + "</td>" +
+        "</tr>";
+    }).join("");
+    body.innerHTML = html || '<tr><td colspan="7" style="color:var(--muted)">暂无</td></tr>';
+    document.getElementById("no-result").hidden = n > 0;
+  }
+
+  function stats() {
+    var c = { total: ideas.length, backlog: 0, in_progress: 0, published: 0, killed: 0, win: 0 };
+    ideas.forEach(function (it) { if (c[it.status] != null) c[it.status]++; if (it.verdict === "win") c.win++; });
+    document.getElementById("stats").innerHTML =
+      "共 <b>" + c.total + "</b> 个点子<br>" +
+      "待扒 <b>" + c.backlog + "</b> · 扒取中 <b>" + c.in_progress + "</b><br>" +
+      "已发布 <b>" + c.published + "</b> · 已杀 <b>" + c.killed + "</b><br>" +
+      "跑赢 baseline <b>" + c.win + "</b>";
+  }
+
+  ["search", "f-status", "f-source", "f-verdict", "f-kind"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", render);
+    document.getElementById(id).addEventListener("change", render);
+  });
+
+  fetch("ideas/catalog.json").then(function (r) { return r.json(); }).then(function (d) {
+    ideas = d.ideas || [];
+    stats();
+    render();
+  }).catch(function () {
+    document.getElementById("idea-body").innerHTML = '<tr><td colspan="7" style="color:var(--muted)">catalog.json 加载失败</td></tr>';
+  });
+})();
+</script>
 </body>
 </html>
