@@ -63,6 +63,9 @@
   var slider = document.getElementById("tl-slider");
   var playBtn = document.getElementById("tl-play");
   var yearBadge = document.getElementById("tl-year");
+  /* 年份牌 count-up 动画的唯一持有者:新动画开跑前必须杀掉旧的,
+     不然自动播放时几个 tween 各写各的,数字会抖 */
+  var badgeTween = null;
   var nowYear = document.getElementById("tl-now-year");
   var nowList = document.getElementById("tl-now-list");
   var popup = document.getElementById("tl-popup");
@@ -1191,6 +1194,7 @@
   function setYear(y, animate) {
     var prev = currentYear;
     currentYear = y;
+    if (badgeTween) { badgeTween.kill(); badgeTween = null; }
     /* 一步跨过几十年时,沿途每个事件都点一道波,结果是五道同半径的环一起炸开——
        那是噪音不是历史。只为落点附近真正"正在发生"的事件点火。 */
     var jump = Math.abs(y - prev);
@@ -1205,12 +1209,15 @@
     });
     if (y < prev) { waves.length = 0; openIdx = null; }   /* 往回拖就清场 */
     render();
-    /* 跨年份跳过去时,底部的年份牌跟着数过去,不"啪"地闪一下 */
+    /* 跨年份跳过去时,底部的年份牌跟着数过去,不"啪"地闪一下。
+       render() 刚把终点写上去了,先退回起点再数,动画才是唯一的写者。 */
     if (animate && window.gsap && !reducedMotion() && Math.abs(y - prev) > 1) {
+      yearBadge.textContent = fmtYear(prev);
       var badge = { v: prev };
-      gsap.to(badge, { v: y, duration: Math.min(0.9, 0.25 + Math.abs(y - prev) / 120),
+      badgeTween = gsap.to(badge, { v: y, duration: Math.min(0.9, 0.25 + Math.abs(y - prev) / 120),
         ease: "power2.out",
-        onUpdate: function () { yearBadge.textContent = fmtYear(Math.round(badge.v)); } });
+        onUpdate: function () { yearBadge.textContent = fmtYear(Math.round(badge.v)); },
+        onComplete: function () { badgeTween = null; } });
     }
   }
 
