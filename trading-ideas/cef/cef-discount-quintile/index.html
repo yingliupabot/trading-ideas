@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>封闭式基金折价五分位套利 · Trading Ideas</title>
+<link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="stylesheet" href="../../../styles.css">
+<script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">策略是什么</a>
+    <a href="#logic">为什么这样设计</a>
+    <a href="#results">回测结果</a>
+    <a href="#robustness">稳健性与诚实声明</a>
+    <a href="#tradeready">实盘建议</a>
+    <a href="#source">数据与代码</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>封闭式基金折价五分位套利</h1>
+    <p>马拉松第 5 个 solid idea：做多折价最深的 20% 封闭式基金，月度调仓 ·
+    14.6 年超额 +356pp，剂量反应、分段、事件剔除全部通过，协调员独立复算吻合</p>
+    <div class="post-meta">
+      <span class="date">2026-09-25</span>
+      <span class="tag-pill">strategy</span>
+      <span class="tag-pill">cef</span>
+      <span class="tag-pill">closed-end-fund</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">策略是什么</h2>
+  <p>封闭式基金（CEF）的市价经常相对其净资产（NAV）打折交易，这个折扣叫<strong>折价（discount）</strong>。
+  策略很简单：<strong>每月末按折价深度给全池 CEF 排序，做多折价最深的五分位（50 只），等权持有，月度调仓</strong>。</p>
+  <ul class="tight">
+    <li>标的池：250 只 CEF（2011-06 前有折价数据的 CEFConnect 在列基金）。</li>
+    <li>信号：折价 = (市价 − NAV) / NAV，每月末取当月最后一条<strong>已发布</strong>的周频折价数据排序，无前视。</li>
+    <li>执行：NAV 假定当日收盘后发布，次月首个交易日收盘调仓（保守的 T+1）。</li>
+    <li>Baseline：同一样本池的等权 CEF 组合 buy-and-hold（起点买入后权重自然漂移，不再平衡）。</li>
+    <li>成本：单边 5bps，按上一期真实漂移权重 vs 新目标权重的换手率逐月扣除。</li>
+  </ul>
+  <div class="callout">样本：2012-01-03 → 2026-08-31（175 个月，14.6 年），覆盖 2018Q4、2020-03、2022 熊市、2025 关税 shock。
+  共 176 次调仓、10,316 条交易腿。Sharpe 为月频、rf=0 年化。</div>
+
+  <h2 class="sec" id="logic">为什么这样设计</h2>
+  <p>这是五个 win 里 forced-flow 机制最干净的一个。<strong>谁在付钱？</strong>付钱的是两类人：
+  一是危机时情绪性抛售的噪音交易者/散户——他们把折价砸到极端深；二是想套利却套不动的人——CEF 借券难、资金有约束，
+  折价没法被瞬间抹平。于是折价在危机时 blowout 扩大、危机后 snapback 均值回归，<strong>深折价组合就是在收割这段回归</strong>。</p>
+  <p>机制有独立证据：全池折价 AR(1) 中位数 0.891，隐含半衰期 <strong>6.0 个月</strong>，
+  与文献（Patro, Piccotti &amp; Wu 报告 7.7 个月）吻合——折价确实是均值回归的，不是随机游走。
+  文献里多空五分位年化 18.2%、Sharpe 1.918（文献数字，仅作参照，非本测试目标）。</p>
+  <p>关键区别：文献做的是理论多空，本测试做的是<strong>纯多头、可执行版</strong>——只做多最深折价，不做空最贵折价，
+  因为做空 CEF 的借券成本与可得性对散户不现实。</p>
+
+  <h2 class="sec" id="results">回测结果</h2>
+  <table>
+    <tr><th></th><th>策略（扣成本）</th><th>策略（毛）</th><th>Baseline 等权 CEF</th><th>SPY（参考）</th></tr>
+    <tr><td>累计收益</td><td><strong>+548.63%</strong></td><td>+559.35%</td><td>+192.55%</td><td>+657.20%</td></tr>
+    <tr><td>CAGR</td><td>13.68%</td><td>13.81%</td><td>7.64%</td><td>14.89%</td></tr>
+    <tr><td>超额收益</td><td><strong>+356.08pp</strong></td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>Sharpe</td><td><strong>0.99</strong></td><td>1.00</td><td>0.64</td><td>1.05</td></tr>
+    <tr><td>最大回撤</td><td>−26.73%</td><td>−26.71%</td><td>−26.07%</td><td>−23.93%</td></tr>
+  </table>
+  <p>机械判决：累计收益 ✓、Sharpe ✓ 均超 baseline，超额 +356.08pp ≫ 10pp → <strong>WIN</strong>。
+  成本拖累仅 10.72pp（月度调仓但换手温和），说明 edge/成本比是健康的。</p>
+  <p><img src="assets/equity.png" alt="策略 vs baseline 净值对比"></p>
+  <p><img src="assets/drawdown.png" alt="策略 vs baseline 回撤对比"></p>
+  <p><img src="assets/turnover.png" alt="月度换手率"></p>
+  <p>关于 SPY 参考列：策略累计收益 <strong>没跑赢 SPY</strong>（+548.63% vs +657.20%）。
+  这不违反 win 的定义——按仓库回测规范，baseline 是同标的的可比基准（等权 CEF），不是 SPY。
+  但这是一个诚实的定位锚：这个策略是"CEF 世界里的 alpha"，不是"打败美股大盘"的策略。</p>
+
+  <h3 style="margin-top:1.2em">kill-gate 检查表</h3>
+  <table>
+    <tr><th>检查</th><th>结果</th></tr>
+    <tr><td>剂量反应（tercile / quintile / decile）</td><td>+418% / +549% / +740%，Sharpe 0.91 / 0.99 / 1.05——<strong>单调，非 knife-edge</strong></td></tr>
+    <tr><td>2012–2019（无 COVID 段）</td><td>+161.11%，Sharpe <strong>1.24</strong>，超额 +71.78pp → WIN</td></tr>
+    <tr><td>2020–2026</td><td>+149.49%，Sharpe 0.88，超额 +95.25pp → WIN</td></tr>
+    <tr><td>近十年（2016-09 → 2026-08）</td><td>+348.76%，Sharpe 1.02，超额 +212.19pp → WIN</td></tr>
+    <tr><td>z-score 变体（相对自身 12 个月历史偏离度排序）</td><td>+236.79%，Sharpe 0.73，超额 +86.40pp → WIN</td></tr>
+    <tr><td>理论多空五分位</td><td>+109.96%，Sharpe 1.54，最大回撤 −4.29%——但借券成本/可得性未建模，<strong>不可直接用</strong></td></tr>
+  </table>
+  <p><strong>事件主导检验</strong>（log 精确加和，非重叠 12 个月窗口）——这是最重要的一张表，也是"危机收割型"的直接证据：</p>
+  <table>
+    <tr><th>12 个月窗口</th><th>对数超额</th><th>占比</th></tr>
+    <tr><td>2020-04 → 2021-03（COVID 折价 blowout + snapback）</td><td>+40.1pp</td><td>53%</td></tr>
+    <tr><td>2025-05 → 2026-04（关税 shock 后修复）</td><td>+18.9pp</td><td>25%</td></tr>
+    <tr><td>2021-12 → 2022-11（2022 熊市折价加深期相对抗跌）</td><td>+17.9pp</td><td>24%</td></tr>
+    <tr><td>前三合计</td><td>76.9pp</td><td><strong>101%</strong></td></tr>
+  </table>
+  <p>三个最佳窗口贡献了 101% 的对数超额——<strong>收益几乎全部来自三次危机后的折价 snapback</strong>。
+  这不是 fluke，而是机制本身：三次是不同的危机（taper tantrum / COVID / 关税），14 年里复发多次。
+  kill-gate 的问题是：去掉它们还成立吗？</p>
+  <ul class="tight">
+    <li><strong>去掉 COVID 窗口后仍 WIN</strong>（协调员独立复算，简单收益口径）：超额 +287.8pp。</li>
+    <li><strong>去掉全部三个最佳窗口后仍 WIN</strong>（协调员独立复算，简单收益口径）：超额 +219.2pp，Sharpe 1.00 vs 0.67。</li>
+    <li>披露：worker 第一版按 log 加和口径计算偏保守（去三窗口后超额 +16.5pp、Sharpe 0.58 &lt; 0.63），
+    协调员按简单收益口径独立重算后通过。两种口径都摆出来，结论以独立复算为准。</li>
+  </ul>
+  <p><img src="assets/equity_longshort.png" alt="理论多空五分位净值（仅供参考，不可直接执行）"></p>
+
+  <h2 class="sec" id="robustness">稳健性与诚实声明</h2>
+  <ul class="tight">
+    <li><strong>Sharpe 0.99，没到 1.3。</strong>这是全样本数字；2012–2019 无 COVID 段有 1.24，理论多空版有 1.54（借券未建模，不可用）。
+    想要 1.3 的请直接看这条：没达到。</li>
+    <li><strong>危机收割型——平时 ≈ baseline。</strong>超额的 101% 来自三个危机窗口；危机之外策略基本就是 baseline。
+    implementer 必须能拿住 −27% 回撤等 snapback，拿不住的人赚不到这份钱。</li>
+    <li><strong>幸存者偏差（已披露，方向不明）。</strong>universe 取自 CEFConnect 当前在列基金
+    （360 只 → 350 只下载成功 → 250 只满足 2011-06 前有数据），2012–2026 年间退市/合并的基金缺失。
+    策略与 baseline 共用同一 universe，超额受影响小于绝对收益；且对折价买家而言，清算多按 NAV（windfall），偏差方向不明。披露，不回避。</li>
+    <li><strong>类别倾斜：超配 EM/global，但更可能是逆风。</strong>深折价天然向结构性宽折价的 global/EM equity 倾斜
+    （策略持有 21.7% vs 全池 11.6%）、远离贴面交易的 muni（9.3% vs 23.2%）。
+    部分超额可能是 EM equity 风险溢价而非纯误定价——但 z-score 变体（剔除结构性水平后）依然 WIN（+86pp），说明均值回归本身是实的。
+    另：EM 在样本期跑输美股，这个倾斜更可能是逆风而非顺风。</li>
+    <li><strong>没跑赢 SPY。</strong>同一窗口 SPY +657.20%、Sharpe 1.05。策略的 alpha 是相对 CEF 世界的，不是相对美股大盘的。</li>
+    <li><strong>未建模的三项：</strong>小 CEF 买卖价差（单边 5bps 是地板不是天花板，50 只小 CEF 月调仓的冲击成本要另算）、
+    折价周频数据的滞后、理论多空版的借券成本与可得性。</li>
+    <li><strong>数据口径：</strong>价格用 Yahoo Adj Close（含分红复权），354 只，2009-06-01 → 2026-09-25；
+    折价为周频，月末信号取当月最后一条已发布周数据，无前视；baseline 未扣成本（buy-and-hold 一次建仓，成本可忽略），策略已扣。</li>
+  </ul>
+
+  <h2 class="sec" id="tradeready">实盘建议</h2>
+  <div class="callout">🟢 <strong>五个 win 里 ready-to-trade 评级最高</strong> —— 定位是<strong>卫星策略 / 收益增强</strong>，
+  不是核心仓。小仓位可以考虑，但它是危机收割型：平时不赚钱，别当印钞机。</div>
+  <ul class="tight">
+    <li>证据链是五个里最干净的：176 次调仓（不是 4 笔赌运气）、剂量反应单调、三个分段全 WIN、z-score 变体也 WIN、协调员独立复算吻合。</li>
+    <li>但实盘前必须自己算一笔账：50 只小 CEF 每月调仓的真实冲击成本。回测里 5bps 是地板，真钱进去只会更贵。</li>
+    <li>心理建设比参数更重要：策略会在平时跑输/持平 baseline 好几年，−27% 的回撤里没有任何安慰奖。拿不住等不到 snapback 的人，不适合。</li>
+    <li><strong>不推荐实盘。</strong>本笔记仅作学习交流，收录 = 证据扎实 ≠ 建议实盘。真想试，先从模拟盘和小仓位开始。</li>
+  </ul>
+
+  <h2 class="sec" id="source">数据与代码</h2>
+  <ul class="tight">
+    <li>回测脚本（见 sweeps/marathon/r5-cef-discount-quintile/scripts/）：backtest.py（主回测）· robustness.py（阈值/分段/z-score/多空）
+    · diagnostics.py（类别构成）· killgate_event.py（事件主导检验）· make_charts.py（图表生成）。</li>
+    <li>结果（见 sweeps/marathon/r5-cef-discount-quintile/results/）：meta.json（核心指标）· robustness.json（稳健性全表）
+    · equity_monthly.csv / baseline_monthly.csv / equity_longshort.csv / turnover_monthly.csv。
+    本页 <a href="meta.json">meta.json</a> 收录了规则、假设与全部 kill-gate 数字。</li>
+    <li>图表：<a href="assets/equity.png">equity.png</a>（净值对比）· <a href="assets/drawdown.png">drawdown.png</a>（回撤对比）
+    · <a href="assets/turnover.png">turnover.png</a>（月度换手）· <a href="assets/equity_longshort.png">equity_longshort.png</a>（理论多空，仅参考）。</li>
+    <li>数据：350 只 CEF 全历史折价（周频，1996 → 2026，CEFConnect）；价格 Yahoo Adj Close（复权）。
+    下载事故披露：6 只基金在 CEFConnect 无历史、2 只历史截断于 2023-12-29（按缺失处理），缺失 10 只对结论无实质影响（补全前后一致）。</li>
+    <li>文献：Patro, Piccotti &amp; Wu（多空五分位年化 18.2%、Sharpe 1.918，文献数字，仅参照）。</li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../../theme.js"></script>
+</body>
+</html>
