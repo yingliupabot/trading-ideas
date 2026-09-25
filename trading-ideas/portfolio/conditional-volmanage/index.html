@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>条件式多因子波动率管理：Sharpe 1.213 的自研策略 · Trading Ideas</title>
+<link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="stylesheet" href="../../../styles.css">
+<script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">策略是什么</a>
+    <a href="#logic">为什么这样设计</a>
+    <a href="#results">回测结果</a>
+    <a href="#robustness">稳健性与诚实声明</a>
+    <a href="#trade">实盘建议</a>
+    <a href="#source">数据与代码</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>条件式多因子波动率管理</h1>
+    <p>点子马拉松五个 win 之一，Sharpe <strong>1.213</strong>——全场最高，最接近 1.3 的一个 ·
+    自研策略，无直接文献；波动率缩放（Moreira-Muir 思想）+ 自研条件门</p>
+    <div class="post-meta">
+      <span class="date">2026-09-25</span>
+      <span class="tag-pill">strategy</span>
+      <span class="tag-pill">volatility</span>
+      <span class="tag-pill">portfolio</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">策略是什么</h2>
+  <p><strong>自己想的。</strong>点子库 id <code>r2-conditional-volmanage</code>，
+  第五轮马拉松 103 个点子中 5 个 win 之一。核心思想分两步，全部在测试前预设：</p>
+  <ul class="tight">
+    <li><strong>因子池</strong>：MKT-RF（市场）+ HML（价值）+ UMD（动量）+ BAB（betting-against-beta），四条腿等权，月频。</li>
+    <li><strong>第 1 步 — Moreira-Muir 逆波动率缩放</strong>：每月末用过去 6 个月组合已实现波动率定下月权重，
+    目标年化波动 12%，权重上限 <strong>2.0x</strong>（可实施性选择，如实披露）。</li>
+    <li><strong>第 2 步 — 条件门（自研核心）</strong>：若组合过去 1 个月收益 &gt; 0 → 全额缩放权重；
+    若 ≤ 0（下跌即高波动的廉价代理）→ 权重<strong>减半（0.5x）</strong>。</li>
+    <li>月调仓；单边 5bps 按实际换手逐月扣除；<strong>无未来函数</strong>：每月末信息只决定次月权重。</li>
+  </ul>
+  <div class="callout">样本：1931-07 → 2026-07（1142 个月，95.2 年），覆盖大萧条、1970s 滞胀、科网泡沫、2008、2020、2022。
+  口径：total return（自融资腿全抵押 +rf）；Sharpe = (total − rf) 均值 / std × √12。单边成本 5bps 已计。</div>
+
+  <h2 class="sec" id="logic">为什么这样设计</h2>
+  <p><strong>波动率聚集是市场的物理规律</strong>，不是行为故事：高波动之后往往还是高波动。
+  Moreira-Muir（2017）证明逆波动率缩放能系统性改善风险调整收益——波动起来时降敞口，波动下去时加敞口，
+  本质上是在波动率这个可预测的状态变量上做择时。</p>
+  <p>条件门再加一层保险：<strong>下跌月份是波动率 spike 和 regime 压力的廉价代理</strong>。
+  在左尾最厚的时候主动把敞口砍一半，等于在分布最危险的那一侧削薄赌注。
+  反向安慰剂验证了方向不是随便定的：上涨后减半（reverse 门）Sharpe 只有 1.009，明显更差。</p>
+  <p>和"朴素版"的对比说明 edge 来自哪里：只缩放市场因子（mm_mkt）的 Sharpe 只有 0.485——
+  <strong>多因子分散 + 条件门</strong>才是收益来源，单做波动率缩放不够。</p>
+
+  <h2 class="sec" id="results">回测结果</h2>
+  <table>
+    <tr><th></th><th>策略（条件门）</th><th>未缩放原组合</th><th>市场 buy-hold</th><th>朴素 MM（只缩市场）</th></tr>
+    <tr><td>累计收益</td><td><strong>+1,038,861.89%</strong></td><td>+13,298.83%</td><td>+18,057.70%</td><td>+8,365.63%</td></tr>
+    <tr><td>年化</td><td><strong>15.67%</strong></td><td>10.49%</td><td>10.85%</td><td>9.96%</td></tr>
+    <tr><td>Sharpe</td><td><strong>1.213</strong></td><td>1.087</td><td>0.483</td><td>0.485</td></tr>
+    <tr><td>最大回撤</td><td>−35.81%</td><td>−24.59%</td><td>−65.74%</td><td>−57.32%</td></tr>
+  </table>
+  <p>累计收益与 Sharpe <strong>双维度跑赢全部三个 baseline</strong>，超额远超 10pp 的 win 门槛。
+  SPY 可比窗口对照（1993-02 → 2026-07）：策略 <strong>+5,724.53% / Sharpe 1.274</strong>
+  vs SPY <strong>+2,998.00% / Sharpe 0.772</strong>——同样双赢。
+  （本行为 total-return 口径；与主表一致的 excess 口径为策略 Sharpe 1.033 vs SPY 0.606，见 summary_metrics.csv。）</p>
+  <p><img src="assets/equity.png" alt="策略 vs 各 baseline 净值对比（对数轴，扣成本）"></p>
+  <p><strong>门的三向对比</strong>（方向检验）：主策略 1.213 ＞ 无门 1.126 ＞ 反向门 1.009——
+  门有正贡献，且方向正确，不是 noise。</p>
+  <p><strong>门定义稳健性</strong>（非 knife-edge）：1 个月门 1.213、3 个月门 1.173、波动率分位数门 1.171、无门 1.126——
+  换四种门定义结论不翻转。</p>
+  <p><img src="assets/gate_ablation.png" alt="不同门定义下的 Sharpe 与累计收益对比"></p>
+  <p><strong>去 BAB（3 因子）</strong>：Sharpe 掉到 0.991——BAB 是组合里重要的一条腿，拿掉它 edge 明显变薄。</p>
+  <p><strong>分段结果</strong>：</p>
+  <table>
+    <tr><th>区间</th><th>策略累计 / Sharpe / 回撤</th><th>vs 未缩放超额</th><th>vs 市场超额</th></tr>
+    <tr><td>1931–1989</td><td>+1,025,223.35% / 1.318 / −29.81%</td><td>+968,133pp</td><td>+990,333pp</td></tr>
+    <tr><td>1990–2009</td><td>+1,568.58% / 0.998 / −35.81%</td><td>+920pp</td><td>+1,165pp</td></tr>
+    <tr><td>2010–2026</td><td>+506.69% / 1.164 / −14.19%</td><td>+296.29pp</td><td><strong>−292.38pp</strong></td></tr>
+  </table>
+  <p><img src="assets/subsamples.png" alt="分时段超额收益柱状图"></p>
+  <div class="callout">成本与杠杆：月均换手 27.2%，95 年累计成本拖累约 15.5pp——相对百万级累计可忽略。
+  平均权重 1.68x，上限 2.0x 经常打满：<strong>杠杆式敞口是 Sharpe 的一部分来源</strong>，实现上需要期货或杠杆工具，不是裸多头能复制的。</div>
+
+  <h2 class="sec" id="robustness">稳健性与诚实声明</h2>
+  <ul class="tight">
+    <li><strong>⚠️ 近代累计收益维度警告（必读）</strong>：2010–2026 策略累计 +506.69% vs 市场 +799.08%，
+    超额 <strong>−292.38pp</strong>——同期 Sharpe 仍赢（1.164 vs 0.872），但累计收益跑输市场。
+    全历史 Sharpe 1.213 好看，近十几年累计曲线要打问号。<strong>不能只看一个数字。</strong>
+    这是五个 win 里"年代偏差"风险最需要盯的一条。</li>
+    <li><strong>⚠️ 波动率 spike 时机械降仓可能错过反弹</strong>：门在下跌后减半敞口，V 型反弹（如 2020-04）时会踏空一段。
+    这是设计内代价，不是 bug——用反弹期的踏空，换崩盘期的保命。</li>
+    <li><strong>⚠️ 回撤是加了杠杆的回撤</strong>：全样本最大回撤 −35.81%（1990–2009 段），发生在平均 1.68 倍敞口上。
+    1.213 的 Sharpe 里有一部分是杠杆买来的，降杠杆后数字会缩水。</li>
+    <li><strong>独立复算通过</strong>：用纯 numpy 的独立代码路径重算主策略，并手工抽查 2008-10 转折点的权重与收益，
+    与主脚本一致。</li>
+    <li><strong>未做的事</strong>：没测 2.0x 上限之外的无上限版（脚本注记了可实施性选择）；没做 2010–2026
+    累计跑输的归因分解（是波动率环境变了，还是因子拥挤了？留作以后的坑）。</li>
+  </ul>
+
+  <h2 class="sec" id="trade">实盘建议</h2>
+  <p><strong>🟡 中 —— 组合的风险管理组件（diversifier）。</strong></p>
+  <ul class="tight">
+    <li>它的价值是<strong>让组合更稳</strong>，不是当收益引擎：熊市里 −35.81% 的回撤 vs 市场 −65.74%，减震器属性真实。</li>
+    <li>不适合无脑冲：平均 1.68 倍敞口 + 近代累计跑输市场的警告，决定了它只能是卫星仓，不能是核心。</li>
+    <li>真要动手，前置条件：能低成本实现杠杆敞口（期货/杠杆 ETF 工具箱），且接受 V 型反弹踏空。</li>
+    <li><strong>不推荐实盘</strong>：以上是研究结论的诚实定位，不是投资建议。近代累计维度的问号解开之前，它只是个"证据扎实的研究对象"。</li>
+  </ul>
+
+  <h2 class="sec" id="source">数据与代码</h2>
+  <ul class="tight">
+    <li>回测脚本：<a href="backtest.py">backtest.py</a>（主回测，规格测试前预设）· <a href="verify.py">verify.py</a>（独立复算：纯 numpy 重算 + 2008-10 手工抽查）</li>
+    <li>结果：<a href="summary_metrics.csv">summary_metrics.csv</a>（全样本指标表）· <a href="subsamples.csv">subsamples.csv</a>（分段结果）· <a href="meta.json">meta.json</a>（本笔记元数据 + 回测规格）</li>
+    <li>图表：<a href="assets/equity.png">equity.png</a>（净值对比，对数轴）· <a href="assets/gate_ablation.png">gate_ablation.png</a>（门稳健性）· <a href="assets/subsamples.png">subsamples.png</a>（分时段超额）</li>
+    <li>数据：Ken French Data Library（F-F_Research_Data_Factors + Momentum，202607 CRSP vintage）；
+    AQR Betting Against Beta 月频 USA 表；Yahoo Finance SPY 复权月线 1993-02 → 2026-08。规则细节见 backtest.py 文件头注释。</li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../../theme.js"></script>
+</body>
+</html>
