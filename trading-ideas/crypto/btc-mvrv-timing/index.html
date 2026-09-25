@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC MVRV 估值择时 · Trading Ideas</title>
+<link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="stylesheet" href="../../../styles.css">
+<script>(function(){var t;try{t=localStorage.getItem('ti-theme');}catch(e){}if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <button class="icon-btn hamburger" id="sidebar-toggle" aria-label="打开目录">☰</button>
+    <a class="brand" href="../../../index.html"><span class="logo-dot">📈</span><span class="brand-text">Trading Ideas</span></a>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-15v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/yingliupabot/trading-ideas" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <h4>本页目录</h4>
+    <a href="#what">策略是什么</a>
+    <a href="#logic">为什么这样设计</a>
+    <a href="#results">回测结果</a>
+    <a href="#robustness">稳健性与诚实声明</a>
+    <a href="#tradability">实盘建议</a>
+    <a href="#source">数据与代码</a>
+  </aside>
+  <main class="content">
+  <header class="top">
+    <h1>BTC MVRV 估值择时</h1>
+    <p>链上估值锚 MVRV 做的极简择时：极端高位清仓、低位买回 · 11 年 4 笔交易，
+    累计收益与 Sharpe 双维度跑赢 BTC buy-and-hold</p>
+    <div class="post-meta">
+      <span class="date">2026-09-25</span>
+      <span class="tag-pill">crypto</span>
+      <span class="tag-pill">bitcoin</span>
+      <span class="tag-pill">valuation</span>
+      <span class="tag-pill">strategy</span>
+    </div>
+  </header>
+
+  <h2 class="sec" id="what">策略是什么</h2>
+  <p>规则极简，测试前预先设定，非事后拼凑：</p>
+  <ul class="tight">
+    <li>每日看 MVRV：<strong>&gt; 3.7 → 清仓持有现金；&lt; 1 → 全仓买入 BTC；1~3.7 之间 → 保持上一状态</strong>（hysteresis 防抖动）。</li>
+    <li>首个信号日前默认持有 BTC（注明假设）。</li>
+    <li>执行用信号日收盘价；单边成本 5bps，全仓切换；现金收益记 0（保守）。</li>
+    <li>Baseline：同一区间 BTC buy-and-hold，不计成本。</li>
+  </ul>
+  <div class="callout">样本：2015-01-01 → 2026-05-23（4161 天），覆盖 2017 顶、2018 熊、2021 双顶、2022 熊、2023–2026 牛市。
+  Sharpe 按 365 天年化、rf=0（BTC 7×24 交易）。</div>
+
+  <h2 class="sec" id="logic">为什么这样设计</h2>
+  <p><strong>MVRV = 市值 / 已实现市值</strong>，衡量全市场 BTC 持有者的平均浮盈倍数。
+  已实现市值按每枚币上次链上移动时的价格加总——它近似"全市场平均成本"，是个慢变量，
+  不像价格那样每天被情绪带着跑。</p>
+  <p>经验规律：MVRV &gt; 3.7 对应牛市顶部区域（全市场浮盈极端，获利抛压将至）；
+  MVRV &lt; 1 对应熊市底部区域（全市场浮亏，卖压枯竭）。
+  阈值 3.7 取自 Coinglass 对 MVRV 顶底划分的公开概念，<strong>在样本内仅出现 22 天</strong>——
+  这是个"一生几次"的极端信号，天然适合低频择时，而不是频繁交易。</p>
+  <p>历史对照：2017-12 顶部 MVRV 达 4.4；2021-11 顶部约 2.85（未触发 3.7）；
+  2018-12 熊底约 0.69；2022-11 熊底约 0.75。阈值落在历史极端值上，不是拍脑袋。</p>
+
+  <h2 class="sec" id="results">回测结果</h2>
+  <table>
+    <tr><th></th><th>BTC buy-hold</th><th>MVRV 策略（扣 5bps）</th></tr>
+    <tr><td>累计收益</td><td>+24,241.04%</td><td><strong>+124,539.98%</strong></td></tr>
+    <tr><td>超额收益</td><td>—</td><td><strong>+100,298.94pp</strong></td></tr>
+    <tr><td>CAGR</td><td>61.98%</td><td><strong>86.95%</strong></td></tr>
+    <tr><td>Sharpe（365 天年化，rf=0）</td><td>0.714</td><td><strong>1.106</strong></td></tr>
+    <tr><td>最大回撤</td><td>−83.78%</td><td><strong>−61.45%</strong></td></tr>
+    <tr><td>交易次数</td><td>—</td><td>4（2 次清仓 + 2 次买入）</td></tr>
+  </table>
+  <p><img src="assets/equity.png" alt="MVRV 策略 vs BTC buy-hold 净值与 MVRV 时间线"></p>
+  <p><strong>4 笔交易的明细</strong>：</p>
+  <table>
+    <tr><th>日期</th><th>动作</th><th>成交价</th><th>当日 MVRV</th><th>事后看</th></tr>
+    <tr><td>2017-12-06</td><td>清仓</td><td>$13,992</td><td>4.211</td><td>躲过了 2018 年熊市（提前 11 天卖在顶部前）</td></tr>
+    <tr><td>2018-11-19</td><td>全仓买入</td><td>$4,792</td><td>0.983</td><td>买在熊底区域（最低 $3,185 在一个月后）</td></tr>
+    <tr><td>2021-01-07</td><td>清仓</td><td>$39,216</td><td>3.742</td><td><strong>卖早了</strong>：错过了之后涨到 $69k 的主升段</td></tr>
+    <tr><td>2022-06-13</td><td>全仓买入</td><td>$22,316</td><td>0.962</td><td>买在 Luna / 三箭崩盘周，躲过下半年跌到 $15.7k 的一半</td></tr>
+  </table>
+  <p><strong>关键区间</strong>：2022 全年策略 −25.99% vs buy-hold −65.26%（上半年空仓避险，6 月接回后仍吃下半段下跌）；
+  2017-12→2018 全年策略 +2.76% vs buy-hold −64.77%。
+  赢的来源主要是第一轮周期的"逃顶+抄底"复利（$13,992 → $4,792 的 BTC 数量放大），
+  第二轮周期"卖早"的代价被第一轮的利润垫住了——这是下面要诚实交代的部分。</p>
+
+  <h2 class="sec" id="robustness">稳健性与诚实声明</h2>
+  <ul class="tight">
+    <li><strong>11 年只做了 4 笔交易，结果高度集中。</strong>统计上这不是"显著性"，是"两次都押对了"。
+    别把它当成每年可重复的 alpha。最大回撤 <strong>−61.45%</strong>——策略躲过了 −84% 的 buy-hold 回撤，
+    但自己依然要吃 −61% 的回撤，拿不住的人等于白测。</li>
+    <li><strong>低频估值择时不适用"剔除 top-3 事件"的字面检验。</strong>
+    这是收录门第 6 条的已知补丁：字面剔除 3 笔就剩 1 笔，检验本身失去意义——这是工具不适用，不是策略脆弱。
+    替代读法是两问：(a) <strong>跨周期是否成立</strong>——2017 和 2021 两个完整牛熊周期都触发了有效信号，
+    不是单周期运气；(b) <strong>机制是否依赖单事件</strong>——MVRV 是可持续的链上状态变量，
+    不依赖某一次公告、某一份申报。但这仍是五个 win 里软门最弱的一个，特此声明。</li>
+    <li><strong>阈值有参数运气成分</strong>：事后扫了 exit{3.5, 3.7, 4.0} × entry{0.8, 1.0, 1.2} 共 9 格。
+    exit=3.7 与 4.0 时 6/6 格双赢（超额 +31k~198k pp，Sharpe 0.875~1.229）；
+    但 exit=3.5 时 2/3 格输（超额 −441pp、−9,693pp），只有 entry=0.8 的格子赢。
+    规格里的 3.7 来自 Coinglass 概念而非样本内优化，但它恰好落在"赢的区域"里。</li>
+    <li><strong>2021 年那次是卖早了</strong>：MVRV 在 2021-11 顶部只到 2.85，说明 3.7 阈值在"机构化后的 BTC"里可能偏高——
+    阈值是否该随周期下调，是未验证的开放问题。</li>
+    <li><strong>执行假设偏乐观</strong>：MVRV 本身由当日收盘价算出，现实中信号确认有约 1 天时滞；
+    回测按信号日收盘直接成交，忽略了这部分滑点。4 笔交易、单边 5bps 已扣，但大资金冲击成本未建模。</li>
+    <li><strong>数据时滞</strong>：免费归档更新止于 2026-05-24（约 4 个月时滞），2026 年后半段的牛市尾部不在样本内。</li>
+  </ul>
+
+  <h2 class="sec" id="tradability">实盘建议</h2>
+  <p><strong>🔴 低 —— BTC 长持者的择时参考，不是独立策略。</strong></p>
+  <ul class="tight">
+    <li>无统计信心：4 笔交易支撑不起仓位决策，重仓不可。</li>
+    <li>它最适合的角色是"估值闹钟"：MVRV 进入极端区时提醒长持者检查风险，而不是一套自动交易系统。</li>
+    <li>大部分时间它和 buy-hold 完全一样——指望它"每年创造超额"是对这份回测的误读。</li>
+  </ul>
+
+  <h2 class="sec" id="source">数据与代码</h2>
+  <ul class="tight">
+    <li>回测脚本：<a href="backtest.py">backtest.py</a> · 结果：<a href="results.json">results.json</a> · 图表：<a href="assets/equity.png">assets/equity.png</a></li>
+    <li>数据：<a href="https://github.com/coinmetrics/data" target="_blank" rel="noopener">coinmetrics/data</a> GitHub 归档（CC BY-NC 4.0），<code>csv/btc.csv</code> 的 <code>CapMVRVCur</code> + <code>PriceUSD</code> 日频；
+    概念参考 <a href="https://www.coinglass.com/pro/i/bitcoin-mvrv" target="_blank" rel="noopener">Coinglass Bitcoin MVRV</a>。</li>
+    <li>假设清单：首日默认持有 BTC；信号日收盘价执行；单边 5bps；现金收益 0；Sharpe 按 365 天年化、rf=0；BTC 7×24 交易故用 365 天。</li>
+  </ul>
+  <footer>trading-ideas · 内容仅作学习交流,不构成投资建议</footer>
+  </main>
+</div>
+<script src="../../../theme.js"></script>
+</body>
+</html>

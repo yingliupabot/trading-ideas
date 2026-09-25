@@ -1,0 +1,38 @@
+{
+  "sample": "2015-01-01->2026-05-23",
+  "n_days": 4161,
+  "strategy_ret_pct": 124539.98,
+  "baseline_ret_pct": 24241.04,
+  "excess_pp": 100298.94,
+  "sharpe": 1.106,
+  "baseline_sharpe": 0.714,
+  "trades": 4,
+  "max_dd_pct": -61.45,
+  "baseline_max_dd_pct": -83.78,
+  "trade_log": [
+    {
+      "date": "2017-12-06",
+      "side": "EXIT",
+      "price": 13992.13,
+      "mvrv": 4.211
+    },
+    {
+      "date": "2018-11-19",
+      "side": "ENTRY",
+      "price": 4792.2,
+      "mvrv": 0.9826
+    },
+    {
+      "date": "2021-01-07",
+      "side": "EXIT",
+      "price": 39215.65,
+      "mvrv": 3.742
+    },
+    {
+      "date": "2022-06-13",
+      "side": "ENTRY",
+      "price": 22316.26,
+      "mvrv": 0.9624
+    }
+  ]
+}
