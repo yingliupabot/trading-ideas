@@ -62,7 +62,7 @@
   共 176 次调仓、10,316 条交易腿。Sharpe 为月频、rf=0 年化。</div>
 
   <h2 class="sec" id="logic">为什么这样设计</h2>
-  <p>这是五个 win 里 forced-flow 机制最干净的一个。<strong>谁在付钱？</strong>付钱的是两类人：
+  <p>这是四个 win 里 forced-flow 机制最干净的一个。<strong>谁在付钱？</strong>付钱的是两类人：
   一是危机时情绪性抛售的噪音交易者/散户——他们把折价砸到极端深；二是想套利却套不动的人——CEF 借券难、资金有约束，
   折价没法被瞬间抹平。于是折价在危机时 blowout 扩大、危机后 snapback 均值回归，<strong>深折价组合就是在收割这段回归</strong>。</p>
   <p>机制有独立证据：全池折价 AR(1) 中位数 0.891，隐含半衰期 <strong>6.0 个月</strong>，
@@ -139,10 +139,12 @@
   </ul>
 
   <h2 class="sec" id="tradeready">实盘建议</h2>
-  <div class="callout">🟢 <strong>五个 win 里 ready-to-trade 评级最高</strong> —— 定位是<strong>卫星策略 / 收益增强</strong>，
+  <div class="callout">🟢 <strong>四个 win 里 ready-to-trade 评级最高</strong> —— 定位是<strong>卫星策略 / 收益增强</strong>，
   不是核心仓。小仓位可以考虑，但它是危机收割型：平时不赚钱，别当印钞机。</div>
   <ul class="tight">
-    <li>证据链是五个里最干净的：176 次调仓（不是 4 笔赌运气）、剂量反应单调、三个分段全 WIN、z-score 变体也 WIN、协调员独立复算吻合。</li>
+    <li>证据链是四个里最干净的：176 次调仓（不是 4 笔赌运气）、剂量反应单调、三个分段全 WIN、z-score 变体也 WIN、协调员独立复算吻合。
+    <strong>但有一个缺口</strong>：原始脚本和那次独立复算都没进仓库（见下方「数据与代码」），
+    在仓库里的重建版跑通、对上这页的数之前，第三方复现不了。</li>
     <li>但实盘前必须自己算一笔账：50 只小 CEF 每月调仓的真实冲击成本。回测里 5bps 是地板，真钱进去只会更贵。</li>
     <li>心理建设比参数更重要：策略会在平时跑输/持平 baseline 好几年，−27% 的回撤里没有任何安慰奖。拿不住等不到 snapback 的人，不适合。</li>
     <li><strong>不推荐实盘。</strong>本笔记仅作学习交流，收录 = 证据扎实 ≠ 建议实盘。真想试，先从模拟盘和小仓位开始。</li>
@@ -150,8 +152,17 @@
 
   <h2 class="sec" id="source">数据与代码</h2>
   <ul class="tight">
-    <li>回测脚本（见 sweeps/marathon/r5-cef-discount-quintile/scripts/）：backtest.py（主回测）· robustness.py（阈值/分段/z-score/多空）
-    · diagnostics.py（类别构成）· killgate_event.py（事件主导检验）· make_charts.py（图表生成）。</li>
+    <li><strong>原始脚本没有进仓库。</strong>这页的数字出自 sweeps/marathon/r5-cef-discount-quintile/scripts/ 下的
+    backtest.py（主回测）· robustness.py（阈值/分段/z-score/多空）· diagnostics.py（类别构成）
+    · killgate_event.py（事件主导检验）· make_charts.py（图表生成）——那是跑马拉松那台机器上的工作目录，
+    不在本仓库里。另外三个 win 都把 backtest.py 提交了，只有这一条没有。</li>
+    <li><a href="backtest.py">backtest.py</a> 是 2026-09-26 <strong>按本页规则重建</strong>的主回测：
+    <code>--selftest</code> 在合成数据上验了机制（恒等、埋信号、前视陷阱、成本记账、baseline 不再平衡；
+    前视陷阱确认过能抓住"信号错位一个月"的引擎），<strong>但还没在真实数据上跑过</strong>——重建它的环境连不上
+    CEFConnect 和 Yahoo。在有网的机器上备好折价与价格两份 CSV（格式见文件头）跑一遍，
+    对上 <a href="meta.json">meta.json</a> 的主结果（cumret 5.4863 / Sharpe 0.9884 / 超额 356.08pp / 176 次调仓），
+    这条 win 才有可复现的证据。kill-gate 的两种算法（log 加和 / 简单收益）它都会并排打印——
+    原稿里这两种算法一个判 FAIL 一个判 PASS，分歧在哪儿，跑一遍就知道。</li>
     <li>结果（见 sweeps/marathon/r5-cef-discount-quintile/results/）：meta.json（核心指标）· robustness.json（稳健性全表）
     · equity_monthly.csv / baseline_monthly.csv / equity_longshort.csv / turnover_monthly.csv。
     本页 <a href="meta.json">meta.json</a> 收录了规则、假设与全部 kill-gate 数字。</li>

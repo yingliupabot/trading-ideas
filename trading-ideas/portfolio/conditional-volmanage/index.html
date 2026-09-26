@@ -38,7 +38,7 @@
   <main class="content">
   <header class="top">
     <h1>条件式多因子波动率管理</h1>
-    <p>点子马拉松五个 win 之一，Sharpe <strong>1.219</strong>——全场最高，最接近 1.3 的一个 ·
+    <p>点子马拉松四个 win 之一，Sharpe <strong>1.219</strong>——全场最高，最接近 1.3 的一个 ·
     自研策略，无直接文献；波动率缩放（Moreira-Muir 思想）+ 自研条件门</p>
     <div class="post-meta">
       <span class="date">2026-09-25</span>
@@ -50,7 +50,7 @@
 
   <h2 class="sec" id="what">策略是什么</h2>
   <p><strong>自己想的。</strong>点子库 id <code>r2-conditional-volmanage</code>，
-  第五轮马拉松 103 个点子中 5 个 win 之一。核心思想分两步，全部在测试前预设：</p>
+  第五轮马拉松 103 个点子中 4 个 win 之一。核心思想分两步，全部在测试前预设：</p>
   <ul class="tight">
     <li><strong>因子池</strong>：MKT-RF（市场）+ HML（价值）+ UMD（动量）+ BAB（betting-against-beta），四条腿等权，月频。</li>
     <li><strong>第 1 步 — Moreira-Muir 逆波动率缩放</strong>：每月末用过去 6 个月组合已实现波动率定下月权重，
@@ -108,7 +108,7 @@
     <li><strong>⚠️ 近代累计收益维度警告（必读）</strong>：2010–2026 策略累计 +381.86% vs 市场 +614.57%，
     超额 <strong>−232.70pp</strong>——同期 Sharpe 仍赢（1.162 vs 0.872），但累计收益跑输市场。
     全历史 Sharpe 1.219 好看，近十几年累计曲线要打问号。<strong>不能只看一个数字。</strong>
-    这是五个 win 里"年代偏差"风险最需要盯的一条。</li>
+    这是四个 win 里"年代偏差"风险最需要盯的一条。</li>
     <li><strong>⚠️ 波动率 spike 时机械降仓可能错过反弹</strong>：门在下跌后减半敞口，V 型反弹（如 2020-04）时会踏空一段。
     这是设计内代价，不是 bug——用反弹期的踏空，换崩盘期的保命。</li>
     <li><strong>⚠️ 回撤是加了杠杆的回撤</strong>：全样本最大回撤 −37.25%（1990–2009 段），发生在平均 1.68 倍敞口上。
