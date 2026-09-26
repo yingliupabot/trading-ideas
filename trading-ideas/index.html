@@ -11,7 +11,7 @@
 :root, :root[data-theme="dark"] { --neutral-bg: rgba(139, 148, 158, 0.28); }
 :root[data-theme="light"] { --neutral-bg: rgba(89, 99, 110, 0.20); }
 .table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; }
-table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 960px; }
+table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 700px; } /* 笔记列钉在右侧：横滑时也看得见，不用一路拖到底 */ table.ideas th:last-child, table.ideas td:last-child { position: sticky; right: 0; } table.ideas tbody td:last-child { box-shadow: -12px 0 16px -12px rgba(0,0,0,.45); }
 table.ideas th, table.ideas td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 table.ideas th { background: var(--panel); color: var(--muted); font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
 table.ideas tr:last-child td { border-bottom: none; }
@@ -140,14 +140,14 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
     <div class="table-scroll">
       <table class="ideas">
         <thead>
-          <tr><th>点子</th><th>日期</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>超额收益</th><th>笔记</th></tr>
+          <tr><th>点子</th><th>日期</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>超额收益（累计pp）</th><th>笔记</th></tr>
         </thead>
         <tbody id="idea-body">
           <tr><td colspan="8" style="color:var(--muted)">加载中…</td></tr>
         </tbody>
       </table>
     </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p>
+    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p> <p class="rule-box">口径统一：超额 = 策略全样本累计收益率 − baseline 全样本累计收益率（百分点 pp），累计口径、非年化。win 门槛：累计超额 ≥10pp 且 Sharpe 同时跑赢 baseline。</p>
 
     <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>

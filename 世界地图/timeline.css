@@ -790,23 +790,8 @@ body[data-view="country"] .tl-globe-wrap {
 }
 body[data-view="country"] .tl-globe-wrap #world-map { cursor: pointer; }
 
-.tl-back-globe[hidden] { display: none !important; }
-.tl-back-globe {
-  position: fixed;
-  top: calc(var(--top-h) + 152px);
-  left: max(18px, env(safe-area-inset-left));
-  width: 132px;
-  z-index: 25;
-  padding: 5px 0;
-  border: none;
-  background: none;
-  color: var(--ink-soft);
-  font-family: Georgia, "Songti SC", serif;
-  font-size: 12px;
-  letter-spacing: 2px;
-  cursor: pointer;
-}
-.tl-back-globe:hover { color: var(--accent); }
+.tl-back-globe[hidden] { display: none !important; } .tl-back-globe { position: fixed; top: calc(var(--top-h) + 152px); left: max(18px, env(safe-area-inset-left)); z-index: 25; padding: 9px 18px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); color: var(--text); font-family: Georgia, "Songti SC", serif; font-size: 13px; letter-spacing: 2px; white-space: nowrap; cursor: pointer; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.30); }
+.tl-back-globe:hover { color: var(--accent); border-color: var(--accent); }
 
 /* 标题二选一 */
 .tl-title-country { display: none; }
@@ -832,13 +817,7 @@ body[data-view="country"] #tl-dossier-body { display: block; }
     left: max(12px, env(safe-area-inset-left));
     filter: drop-shadow(0 3px 10px var(--globe-cast, rgba(0, 0, 0, 0.35)));
   }
-  body[data-view="country"] .tl-back-globe {
-    top: calc(var(--top-h) + 102px);
-    left: max(12px, env(safe-area-inset-left));
-    width: 88px;
-    font-size: 11px;
-    letter-spacing: 1px;
-  }
+  body[data-view="country"] .tl-back-globe { top: calc(var(--top-h) + 102px); left: max(12px, env(safe-area-inset-left)); font-size: 12px; letter-spacing: 1px; padding: 10px 16px; min-height: 44px; }
   /* 卷轴在竖屏里不值当留两根轴的余量,纸铺满 */
   .tl-scroll { width: calc(100vw - 28px); }
   .tl-scroll-label { left: 14px; bottom: 12px; }
