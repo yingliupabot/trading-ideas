@@ -25,6 +25,7 @@ dts = pd.to_datetime(d.iloc[:, 0])
 bab = pd.DataFrame({'ym': (dts.dt.year * 100 + dts.dt.month).values,
                     'bab': pd.to_numeric(d.iloc[:, ui], errors='coerce').values})
 m = ff3.merge(mom, on='ym').merge(bab, on='ym').sort_values('ym').reset_index(drop=True)
+m['rf'] = 0.0  # 统一口径：rf=0
 R = np.column_stack([(m['mktrf'] / 100).values, (m['hml'] / 100).values,
                      (m['umd'] / 100).values, m['bab'].values])   # excess, 小数
 REQ = R.mean(axis=1)

@@ -11,7 +11,7 @@ r2-conditional-volmanage: 条件式多因子 volatility management（自研，�
   条件门（自研核心）: 若组合过去 1 个月收益 > 0 -> 全缩放权重;
       若 <= 0（下跌/高 vol 代理）-> 0.5x 缩放后权重
   月调仓；单边 5bps 按换手率计入
-口径: 全部序列转为 total return（自融资组合按全抵押 +rf），Sharpe = mean(total-rf)/std * sqrt(12)；
+口径: rf=0（现金/抵押收益为 0，全序列即策略本身收益）；Sharpe = mean(returns)/std * sqrt(12)；
       全样本对比统一用策略可交易窗口 1931-07->2026-07
 Baseline: (1) 朴素 MM 只缩市场因子 (2) 未缩放原四因子组合 (3) 市场 buy-hold
   （French MKT 全历史；SPY 1993+ 另列）
@@ -59,6 +59,7 @@ def load():
     df = df.sort_values('ym').reset_index(drop=True)
     for c in ['mktrf', 'smb', 'hml', 'rf', 'umd']:
         df[c] = df[c] / 100.0
+    df['rf'] = 0.0  # 统一口径：rf=0（现金/抵押收益为 0；必须在 mkt_total 之前）
     df['mkt_total'] = df['mktrf'] + df['rf']
     df = df.merge(spydf, on='ym', how='left')
     df['date'] = pd.to_datetime(df['ym'].astype(str), format='%Y%m')
@@ -213,7 +214,7 @@ def main():
     plot(tot, df, span)
     meta = dict(target_vol=TARGET_VOL, vol_window_m=VOL_WIN, w_cap=W_CAP, cost_bps_oneway=5,
                 eval_window=f"{int(df.ym.loc[span].min())}->{int(df.ym.loc[span].max())}",
-                convention="total return; self-financing legs fully collateralized (+rf); Sharpe on total-rf",
+                convention="rf=0 (cash/collateral earns nothing); Sharpe = mean/std * sqrt(12)",
                 bab="AQR Betting Against Beta Equity Factors Monthly, USA sheet, self-financing excess returns, decimal units",
                 french="Ken French Data Library F-F_Research_Data_Factors_CSV + F-F_Momentum_Factor_CSV, 202607 CRSP vintage",
                 spy="Yahoo Finance SPY adj close total return, 1993-02->2026-08")
