@@ -9,7 +9,8 @@
     "layout": "node scripts/check-layout.js",
     "country": "node scripts/check-country.js && node scripts/check-country.js --no-gsap",
     "zoom": "node scripts/check-zoom.js && node scripts/check-zoom.js --no-gsap",
-    "dive": "node scripts/check-dive.js"
+    "dive": "node scripts/check-dive.js",
+    "cef-selftest": "python3 trading-ideas/cef/cef-discount-quintile/backtest.py --selftest"
   },
   "devDependencies": {
     "gsap": "3.12.5",
