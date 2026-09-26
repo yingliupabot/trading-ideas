@@ -91,6 +91,11 @@
   var cmapMarks = document.getElementById("tl-cmap-marks");
   var backGlobe = document.getElementById("tl-back-globe");
   var view = "globe", countryNow = null, cmap = null, cmarks = [], enterTimer = 0;
+  /* 导航代数:每次进/出国家 +1。所有延迟回调(推近定时器、形变收尾、撤画布)
+     都记下自己出生时的代数,醒来发现代数变了就作废 —— 用户半路按了 Esc 或
+     改点别的国家,旧回调不许再改页面。之前两个"半路退出"的竞态都是这一类:
+     推近那半秒按 Esc 被吞、球变纸途中按 Esc 回来球是隐形的。 */
+  var navGen = 0, exiting = false, hideCanvasTimer = 0, exitTl = null, morphSkip = false;
   var morphCv = document.getElementById("tl-morph");
   var morphCx = morphCv.getContext("2d");
   var morphRAF = 0, zoomRAF = 0, morphTween = null, zoomTween = null;
@@ -529,6 +534,11 @@
       document.querySelector(".tl-scroll-label")].filter(Boolean);
     gsap.set(nodes, { clearProps: "all" });
   }
+  function ringD(ring) {
+    return ring.map(function (p, i) {
+      return (i ? "L" : "M") + p.x.toFixed(1) + "," + p.y.toFixed(1);
+    }).join("") + "Z";
+  }
   /* 沿路径等弧长采 n 个点 */
   function samplePath(pathEl, n) {
     try {
@@ -611,11 +621,23 @@
         nb = document.getElementById("tl-cmap-neighbors"),
         marks = document.getElementById("tl-cmap-marks"),
         land = document.getElementById("tl-cmap-land");
+    if (land) land.dataset.origD = land.getAttribute("d");
+    /* 只拿主陆地去变形。samplePath 沿整条 d 等弧长取点时,会把几个子路径首尾
+       相接当成一个多边形 —— 英国和北爱中间、法国和科西嘉中间、大陆和海南中间,
+       都会被画出一条横跨海峡的边(四个会潜水的国家里中了三个)。
+       小岛另起一条路径,跟海和邻国一起淡掉。countryMap 保证 rings[0] 是主环。 */
+    var minor = null;
+    if (land && cmap && cmap.rings && cmap.rings.length > 1) {
+      land.setAttribute("d", ringD(cmap.rings[0]));
+      minor = document.createElementNS(NS, "path");
+      minor.id = "tl-cmap-minor";
+      minor.setAttribute("d", cmap.rings.slice(1).map(ringD).join(""));
+      land.parentNode.insertBefore(minor, land);
+    }
     morphSrc = samplePath(land, 140);
     var box = paperBox();
     morphDst = morphSrc ? capsulePoints(box[0], box[1], 140, morphSrc) : null;
     morphT.v = 0;
-    if (land) land.dataset.origD = land.getAttribute("d");
     gsap.set(hsWrap, { visibility: "visible", opacity: 0 });
     gsap.set([cmapSvg, hsWrap], { scale: 1, transformOrigin: "50% 50%" });
     diveTl = gsap.timeline({ onComplete: function () { diveTl = null; dived = true; } });
@@ -627,7 +649,7 @@
             yoyo: true, repeat: 1, ease: "sine.inOut", stagger: 0.14 }, "<")
         /* 贴进去:海、邻国、标记淡掉,陆地只剩墨线 */
         .to([cmapSvg, hsWrap], { scale: 1.12, duration: 0.6, ease: "power2.inOut" })
-        .to([sea, nb, marks].filter(Boolean), { opacity: 0, duration: 0.5 }, "<")
+        .to([sea, nb, marks, minor].filter(Boolean), { opacity: 0, duration: 0.5 }, "<")
         .to(land, { fillOpacity: 0, duration: 0.5 }, "<")
         /* 法国亲手变成卷:轮廓拉伸成画框,河一直长在变形的形状里 */
         .to(morphT, { v: 1, duration: 1.15, ease: "power2.inOut", onUpdate: applyMorph,
@@ -639,7 +661,7 @@
     } else {
       /* 轮廓退化采不出点:退回淡入,不玩变形 */
       diveTl
-        .to([sea, nb, marks].filter(Boolean), { opacity: 0, duration: 0.5 })
+        .to([sea, nb, marks, minor].filter(Boolean), { opacity: 0, duration: 0.5 })
         .to(land, { fillOpacity: 0, duration: 0.5 }, "<")
         .to(hsWrap, { opacity: 1, duration: 0.9, ease: "power2.out",
             onStart: function () {
@@ -653,6 +675,8 @@
   function buildCountryMap(en) {
     stopDive();
     dived = false;
+    var staleMinor = document.getElementById("tl-cmap-minor");
+    if (staleMinor) staleMinor.remove();
     /* 上一轮潜水可能把 inline 痕迹留在地图、墨线和题签上,清掉,从干净的地图开始 */
     clearDiveProps();
     var box = paperBox();
@@ -817,6 +841,7 @@
     /* 说了要少动效就别摊了,直接给结果 */
     var reduce = reducedMotion();
     var DUR = reduce ? 1 : 900, t0 = 0;
+    morphSkip = false;
     prep.draw(morphCx, back ? 1 : 0, dpr);
     if (window.gsap && !reduce) {
       /* 球摊成纸不是匀速的:起手沉、中间脆、落笔稳,和毛笔一个脾气 */
@@ -830,10 +855,10 @@
     }
     morphRAF = requestAnimationFrame(function step(now) {
       if (!t0) t0 = now;
-      var k = Math.min(1, (now - t0) / DUR);
+      var k = morphSkip ? 1 : Math.min(1, (now - t0) / DUR);
       prep.draw(morphCx, back ? 1 - k : k, dpr);
       if (k < 1) morphRAF = requestAnimationFrame(step);
-      else done();
+      else { morphRAF = 0; done(); }     /* 归零:skipAhead 靠它判断"还在播",留着旧 id 会吞掉纸上的每一次点击 */
     });
     return prep;
   }
@@ -859,19 +884,24 @@
     tweenZoom(2.6, 520);
 
     clearTimeout(enterTimer);
+    clearTimeout(hideCanvasTimer);
+    var gen = ++navGen;
     enterTimer = setTimeout(function () {
-      if (countryNow !== en) return;          /* 半路又点了别的国家 */
+      if (gen !== navGen || countryNow !== en) return;   /* 半路退出了,或又点了别的国家 */
       view = "country";
       scrollEl.hidden = false;
       backGlobe.hidden = false;
       document.body.classList.add("globe-in");
 
       runMorph(en, false, function () {
+        if (gen !== navGen) return;
         buildCountryMap(en);
         /* 画布还盖在上面,底下把纸和图亮出来,等它淡完再撤画布 */
         document.body.classList.remove("morphing");
         document.body.classList.remove("globe-in");
-        setTimeout(function () { if (view === "country") morphCv.hidden = true; }, 300);
+        /* 原来判断的是 view === "country":可退出时 view 要等反向形变收尾才变,
+           这 300ms 里按 Esc,它会把正在播反向形变的画布藏掉,空台一秒 */
+        hideCanvasTimer = setTimeout(function () { if (gen === navGen) morphCv.hidden = true; }, 300);
       });
       /* 角上那颗是"你在这儿"的定位器,要看得见整个世界。
          此刻真球已经藏起来了,换倍率看不见,不用补间 */
@@ -880,20 +910,46 @@
     }, 560);
   }
 
+  /* 角上那颗球进场时带着 globe-in(透明、缩到 0.55),本该由正向形变收尾摘掉。
+     正向形变被退出打断时收尾不会跑,它就一直挂着:回到地球视图,球是隐形的。
+     而且量球的位置之前必须摘干净 —— 带着 scale(0.55) 量出来的圆是小一圈的 */
+  function dropGlobeIn() {
+    if (!document.body.classList.contains("globe-in")) return;
+    var gw = document.querySelector(".tl-globe-wrap");
+    gw.style.transition = "none";
+    document.body.classList.remove("globe-in");
+    void gw.offsetWidth;                     /* 立刻落定,别让 0.55→1 的过渡在量的时候还没走完 */
+    gw.style.transition = "";
+  }
+
   function exitCountry() {
+    if (exiting) return;                     /* 反向形变播着时再按 Esc:不许重入 */
     clearTimeout(enterTimer);
-    if (view !== "country") { countryNow = null; Globe.setZoom(1); return; }
+    clearTimeout(hideCanvasTimer);
+    ++navGen;
+    if (view !== "country") {
+      /* 还在推近那半秒:页面什么都还没切,把镜头拉回来就算退出 */
+      if (countryNow) { countryNow = null; tweenZoom(1, 420); }
+      return;
+    }
+    exiting = true;
     var en = countryNow;
     countryNow = null;
     backGlobe.hidden = true;
+    dropGlobeIn();
     stopDive();
     var paper = document.getElementById("tl-scroll-paper");
     var hs = paper.querySelector(".tl-handscroll");
 
     function finish() {
       dived = false;
+      exitTl = null;
       /* 手卷的氛围循环(船晃、云飘、水流)跟着走,不留孤魂 */
       if (hs && hs._hsTweens) hs._hsTweens.forEach(function (t) { t.kill(); });
+      /* 潜水半路退出时,"卷浮上来"那条淡入不在上面的名单里,单独掐掉 */
+      if (hs && window.gsap) gsap.killTweensOf(hs);
+      var minorEl = document.getElementById("tl-cmap-minor");
+      if (minorEl) minorEl.remove();
       /* 变形过的轮廓先接回原始 d,再清 inline 痕迹,下次进来从干净的地图开始 */
       var landEl = document.getElementById("tl-cmap-land");
       if (landEl && landEl.dataset.origD) {
@@ -910,6 +966,7 @@
       stopZoom();
       Globe.setZoom(2.6);
       runMorph(en, true, function () {
+        exiting = false;
         view = "globe";
         scrollEl.hidden = true;
         document.body.classList.remove("morphing");
@@ -923,7 +980,7 @@
 
     /* 浮出来:卷先沉下去,画框缩回法国轮廓、重新填上颜色,海和邻国浮回来,再卷 */
     if (window.gsap && !reducedMotion() && dived && hs) {
-      var revTl = gsap.timeline({ onComplete: finish });
+      var revTl = exitTl = gsap.timeline({ onComplete: finish });
       revTl.to(hs, { opacity: 0, duration: 0.4, ease: "power2.in" });
       if (morphSrc && morphDst) {
         revTl.to(morphT, { v: 0, duration: 0.9, ease: "power2.inOut", onUpdate: applyMorph }, "<+0.1");
@@ -932,7 +989,8 @@
         .to([cmapSvg, hs], { scale: 1, duration: 0.6, ease: "power2.inOut" }, "<")
         .to([document.getElementById("tl-cmap-sea"),
              document.getElementById("tl-cmap-neighbors"),
-             document.getElementById("tl-cmap-marks")].filter(Boolean),
+             document.getElementById("tl-cmap-marks"),
+             document.getElementById("tl-cmap-minor")].filter(Boolean),
             { opacity: 1, duration: 0.5 }, "<+0.2")
         .to("#tl-cmap-land", { fillOpacity: 1, duration: 0.5 }, "<")
         .to(".tl-scroll-label", { opacity: 1, duration: 0.4 }, "<");
@@ -942,6 +1000,30 @@
     }
   }
 
+  /* 点一下纸面,整段镜头直接走到结果。节奏不改 —— 慢是要的,
+     只是别逼人每进一次国家都把四五秒看完。
+     前一段的收尾会生出下一段(形变收尾 → 建图 → 潜水),所以循环着往前推。
+     手卷自己的氛围循环(repeat:-1)不能推到头,只推一次性的入场动画。 */
+  function skipAhead() {
+    var did = false;
+    for (var guard = 0; guard < 6; guard++) {
+      var t = exitTl || morphTween || diveTl;
+      if (!t) break;
+      t.progress(1);
+      did = true;
+    }
+    if (!window.gsap && morphRAF) { morphSkip = true; did = true; }
+    var hs = document.querySelector(".tl-handscroll");
+    if (did && hs && window.gsap) {
+      gsap.getTweensOf(hs).forEach(function (tw) { tw.progress(1); });
+      (hs._hsTweens || []).forEach(function (tw) { if (tw.repeat() !== -1) tw.progress(1); });
+    }
+    return did;
+  }
+  scrollEl.addEventListener("click", function (e) {
+    if (skipAhead()) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+
   backGlobe.addEventListener("click", exitCountry);
   /* 点小球回全局视图 —— 用户想要的就是这个:地球一直在,点它就回去 */
   svg.addEventListener("click", function (e) {
@@ -950,7 +1032,8 @@
     exitCountry();
   }, true);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && view === "country") exitCountry();
+    /* countryNow 有值而 view 还是 globe,就是推近那半秒:这时按 Esc 也得算数 */
+    if (e.key === "Escape" && (view === "country" || countryNow)) exitCountry();
   });
 
   /* 缩放控件:滚轮和捏合都是藏着的,得有个看得见的入口。
@@ -1335,6 +1418,20 @@
     zoom: function (z) { Globe.setZoom(z); },
     openCountry: enterCountry, closeCountry: exitCountry,
     view: function () { return view; },
+    skip: skipAhead,
+    /* 潜水进度与采样源:测试拿 src 的包围盒去核对"只采了主陆地" */
+    dive: function () {
+      var b = null;
+      if (morphSrc) {
+        b = [Infinity, Infinity, -Infinity, -Infinity];
+        morphSrc.forEach(function (p) {
+          if (p[0] < b[0]) b[0] = p[0]; if (p[1] < b[1]) b[1] = p[1];
+          if (p[0] > b[2]) b[2] = p[0]; if (p[1] > b[3]) b[3] = p[1];
+        });
+      }
+      return { v: morphT.v, dived: dived, active: !!diveTl, srcBox: b };
+    },
+    busy: function () { return !!(exitTl || morphTween || diveTl || exiting); },
     countryMarks: function () { return cmarks.map(function (m) {
       return { year: m.ev.year, cls: m.g.getAttribute("class"),
                at: m.g.getAttribute("transform") }; }); },

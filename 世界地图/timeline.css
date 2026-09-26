@@ -512,7 +512,9 @@ body.tl-immersive {
   /* 抽屉拉开时球往上让一截。不让的话抽屉正好盖住球心,
      而标记恰恰都聚在球心那一圈——等于把要看的东西挡了 */
   .tl-globe-wrap { transition: transform 0.28s ease; }
-  body:has(.tl-panel:not(.collapsed)) .tl-globe-wrap { transform: translateY(-11dvh); }
+  /* 只在地球视图里让。国家视图里球是角上的定位器(也是回去的按钮),
+     原来这条不分视图:拉开卷宗抽屉,角上的球被推到 top:-16px,躲进顶栏底下 */
+  body:not([data-view="country"]):has(.tl-panel:not(.collapsed)) .tl-globe-wrap { transform: translateY(-11dvh); }
 
   /* 返回键窄屏只留图标,把横向空间让给标题 */
   .tl-back { padding: 11px; }
@@ -737,7 +739,8 @@ body.tl-immersive {
   stroke-linejoin: round;
 }
 /* 主角:亮出来,岸线加粗成一道刻线 */
-#tl-cmap-land {
+/* #tl-cmap-minor:潜水时从主陆地拆出来的小岛(北爱、科西嘉、海南),单独淡出 */
+#tl-cmap-land, #tl-cmap-minor {
   fill: var(--globe-land);
   stroke: var(--ink);
   stroke-width: 2;

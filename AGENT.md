@@ -43,7 +43,14 @@
   再撤画布** —— 反过来会有十几帧空纸。
 - `Globe.setZoom` 是瞬时的。凡是"推近""退回"这种要让人看见过程的,
   用 `tweenZoom`,别直接调 setZoom。
-- 改完视图切换跑 `npm run country`,改完缩放跑 `npm run zoom`。
+- 改完视图切换跑 `npm run country` 和 `npm run dive`,改完缩放跑 `npm run zoom`。
+  country 和 zoom 各跑两遍:有 GSAP(用户看到的)、没有 GSAP(CDN 连不上时)。
+- GSAP 从 CDN 钉版本引用,测试从 `node_modules` 里的同版本喂给页面(`scripts/gsap.js`):
+  云端连不上 jsdelivr,不这么做测试会一直走降级路径、导演层一行都测不到,而且全绿。
+  **升 GSAP 版本时,`世界地图/index.html` 的 CDN 地址和 `package.json` 的 devDependencies 一起改**,
+  对不上测试会直接报错。
+- 进/出国家的所有延迟回调都要校验 `navGen`(导航代数)。半路按 Esc、改点别的国家时,
+  旧回调醒来发现代数变了必须作废——几个"半路退出"的竞态都是没校验造成的。
   前者验的是**过程**有没有中间态,不只是首尾 —— 首尾对、中间"啪"地一下到位,
   这个错犯过三次(clip-path 两端分量形状不一致;eras.css 的换色 transition
   整条覆盖掉了它;setZoom 一帧跳到位)。

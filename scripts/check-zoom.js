@@ -6,16 +6,19 @@
  */
 var http=require("http"),fs=require("fs"),path=require("path");
 var ROOT=path.join(__dirname,".."), browser=require(path.join(ROOT,"scripts/browser.js"));
+var gsapPin=require(path.join(ROOT,"scripts/gsap.js")), GSAP=gsapPin.wanted();
 var T={".html":"text/html; charset=utf-8",".css":"text/css",".js":"text/javascript",".svg":"image/svg+xml"};
 function serve(){var s=http.createServer(function(q,r){var rel=decodeURIComponent(q.url.split("?")[0]);if(rel.slice(-1)==="/")rel+="index.html";
 fs.readFile(path.join(ROOT,rel),function(e,b){if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{"content-type":T[path.extname(rel).toLowerCase()]||"application/octet-stream"});r.end(b);});});
 return new Promise(function(x){s.listen(0,"127.0.0.1",function(){x(s);});});}
 function ok(c,l,x){console.log((c?"  ✓ ":"  ✗ ")+l+(x?"  ("+x+")":""));return c;}
 (async function(){
-  var srv=await serve(), base="http://127.0.0.1:"+srv.address().port, b=await browser.launch(), pass=true, errs=[];
+  var srv=await serve(), base="http://127.0.0.1:"+srv.address().port, b=gsapPin.install(await browser.launch(), GSAP), pass=true, errs=[];
+  console.log(GSAP ? "(有 GSAP:用户看到的那条路径)" : "(没有 GSAP:CDN 连不上时的降级路径)");
   var ctx=await b.newContext({viewport:{width:1440,height:900}}), pg=await ctx.newPage();
   pg.on("pageerror",e=>errs.push(e.message));
   await pg.goto(base+"/世界地图/index.html",{waitUntil:"networkidle"}); await pg.waitForTimeout(600);
+  pass &= ok((await pg.evaluate(()=>!!window.gsap))===GSAP, "GSAP 模式确实生效", GSAP?"有":"无");
   var st=()=>pg.evaluate(()=>({z:+TL.globe.zoom.toFixed(2),
     读数:document.getElementById("tl-zoom-read").textContent,
     加:!document.getElementById("tl-zoom-in").disabled,
