@@ -85,7 +85,7 @@
 - **风险**：Fed model 争议大；利率机制变迁（regime break）可能杀死老样本。
 
 ### 5. 条件波动率管理的跨资产版
-- **机制**：r2-conditional-volmanage 是全场 Sharpe 最高（1.213），把同样的 conditional scaling 用到 60/40 组合或 TLT。
+- **机制**：r2-conditional-volmanage 是全场 Sharpe 最高（1.219，rf=0 口径），把同样的 conditional scaling 用到 60/40 组合或 TLT。
 - **证据链**：直接移植最强 win。
 - **风险**：债券的波动率聚集弱于股票；属于"老因子新包装"边缘——但包装的是 win 不是死因子，可接受。
 
