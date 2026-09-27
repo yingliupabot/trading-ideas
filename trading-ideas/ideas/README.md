@@ -60,7 +60,7 @@
 | `verdict` | win 跑赢 / fail 没跑赢 / inconclusive 难定论 / null 资料型无回测 |
 | `claim` | 一句话 claim，必须具体到可证伪 |
 | `baseline` | 对照基准，如 SPY buy-hold |
-| `result` | 回测数字：sample / strategy / baseline / excess_pp（累计，win 门槛用）/ excess_ann_pp（年化，pp/年，页面展示用）/ sharpe / baseline_sharpe / trades / max_dd |
+| `result` | 回测数字：sample / strategy / baseline / excess_pp（累计，win 门槛用）/ excess_ann_pp（年化，pp/年）/ sharpe / baseline_sharpe（页面展示列：策略/基准并列）/ trades / max_dd |
 | `priority` | high / medium / low（只对 backlog/in_progress 有意义） |
 | `tags` | 标签数组 |
 | `note_url` | 已发布笔记的相对链接，无则 null |
