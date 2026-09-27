@@ -186,11 +186,11 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
       var noteUrl = (it.note_url || "").replace(/^\.\.\//, "");
       var title = noteUrl ? '<a class="idea-title" href="' + esc(noteUrl) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
       var sharpe = '<span class="num-na">—</span>';
-      if (it.result && it.result.sharpe != null) {
+      if (it.result && typeof it.result.sharpe === "number") {
         var sp = it.result.sharpe, bp = it.result.baseline_sharpe;
-        var scls = (bp != null) ? (sp >= bp ? "num-win" : "num-fail") : "";
+        var scls = (typeof bp === "number") ? (sp >= bp ? "num-win" : "num-fail") : "";
         sharpe = '<span class="' + scls + '">' + sp.toFixed(2) + "</span>" +
-          (bp != null ? ' <span class="num-base">/ ' + bp.toFixed(2) + "</span>" : "");
+          (typeof bp === "number" ? ' <span class="num-base">/ ' + bp.toFixed(2) + "</span>" : "");
       }
       var noteLink = noteUrl ? '<a href="' + esc(noteUrl) + '">笔记 →</a>' : '<span class="num-na">—</span>';
       var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
