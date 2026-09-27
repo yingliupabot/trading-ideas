@@ -35,7 +35,9 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
 .pill.v-inc { background: var(--neutral-bg); border-color: var(--border); color: var(--muted); }
 .num-win { color: var(--green); font-weight: 600; white-space: nowrap; }
 .num-fail { color: var(--red); font-weight: 600; white-space: nowrap; }
-.num-na { color: var(--muted); }
+.num-na { color: var(--muted); } 
+         .num-base { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  
 .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .filter-row select { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
 .stats-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 2; }
@@ -140,14 +142,14 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
     <div class="table-scroll">
       <table class="ideas">
         <thead>
-          <tr><th>点子</th><th>日期</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>年化超额（pp/年）</th><th>笔记</th></tr>
+          <tr><th>点子</th><th>日期</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>Sharpe（策略/基准）</th><th>笔记</th></tr>
         </thead>
         <tbody id="idea-body">
           <tr><td colspan="8" style="color:var(--muted)">加载中…</td></tr>
         </tbody>
       </table>
     </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p> <p class="rule-box">口径统一：年化超额 = 策略年化收益率 − baseline 年化收益率（百分点/年），几何年化，样本长度不同也可直接比较。事件窗口等不等权样本不计年化，显示为 —。</p>
+    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p> <p class="rule-box">口径统一：Sharpe = 平均收益 / 收益标准差 × √年化周期，rf=0，策略与基准同口径；绿色=策略 Sharpe ≥ 基准，粉色=低于基准。win 门槛仍是累计超额 ≥10pp 且 Sharpe 同时跑赢（历史规则）。</p>
 
     <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>
@@ -183,10 +185,12 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
       var v = it.verdict ? (VERDICT[it.verdict] || [it.verdict, ""]) : null;
       var noteUrl = (it.note_url || "").replace(/^\.\.\//, "");
       var title = noteUrl ? '<a class="idea-title" href="' + esc(noteUrl) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
-      var excess = '<span class="num-na">—</span>';
-      if (it.result && it.result.excess_ann_pp != null) {
-        var ep = it.result.excess_ann_pp;
-        excess = '<span class="' + (ep >= 0 ? "num-win" : "num-fail") + '">' + (ep >= 0 ? "+" : "") + ep.toFixed(2) + "pp/年</span>";
+      var sharpe = '<span class="num-na">—</span>';
+      if (it.result && it.result.sharpe != null) {
+        var sp = it.result.sharpe, bp = it.result.baseline_sharpe;
+        var scls = (bp != null) ? (sp >= bp ? "num-win" : "num-fail") : "";
+        sharpe = '<span class="' + scls + '">' + sp.toFixed(2) + "</span>" +
+          (bp != null ? ' <span class="num-base">/ ' + bp.toFixed(2) + "</span>" : "");
       }
       var noteLink = noteUrl ? '<a href="' + esc(noteUrl) + '">笔记 →</a>' : '<span class="num-na">—</span>';
       var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
@@ -198,7 +202,7 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
         "<td>" + esc(KIND[it.kind] || it.kind) + "</td>" +
         '<td><span class="pill ' + st[1] + '">' + st[0] + "</span></td>" +
         (v ? '<td><span class="pill ' + v[1] + '">' + v[0] + "</span></td>" : '<td><span class="num-na">—</span></td>') +
-        "<td>" + excess + "</td>" +
+        "<td>" + sharpe + "</td>" +
         "<td>" + noteLink + "</td>" +
         "</tr>";
     }).join("");
