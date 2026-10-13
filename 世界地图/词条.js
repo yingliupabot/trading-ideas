@@ -11,7 +11,7 @@ const ENTRIES = [
     "cat": "经济",
     "status": "想读",
     "summary": null,
-    "note": null,
+    "note": "读书笔记/逃不开的经济周期/03-金钱梦之队/",
     "book": {
       "name": "逃不开的经济周期",
       "part": "第一部分 · 发现经济周期——繁荣与崩溃",
@@ -528,7 +528,7 @@ const ENTRIES = [
     "cat": "经济",
     "status": "点亮",
     "summary": "战争压力下英格兰银行暂停纸币兑付黄金：信心消失的那天，就是危机开始的那天。",
-    "note": null,
+    "note": "读书笔记/逃不开的经济周期/02-现金支付危机/",
     "links": [],
     "book": {
       "name": "逃不开的经济周期",
