@@ -19,6 +19,7 @@
   `trials` 是 lyra 试过的版本数，`upstream_ids` 指向本表里的同一个点子（空表示只有 lyra 有）。
   只有新点子能绕开这个死因时才新增条目，并在 `notes` 里写明绕开的是哪个死因、
   对应 lyra 的哪个 `id`。这个文件由 lyra 生成，不要手改。
+  点子库页面把它并进了大表：「谁杀的 · 死因」一列标 lyra 的就是它，只有 lyra 有的点子另起一行。
 - 没搜到 → 新增一条 `backlog`，字段按 schema 填：
   `claim` 必须写清楚——这个点子到底在 claim 什么，
   一句话，含糊的 claim 等于没法证伪，优先杀掉这种。
@@ -49,6 +50,8 @@
 - **killed**：不写笔记也必须留记录——`verdict` + `notes` 写清死因。
   死因是资产：下次看到同类点子，查表就知道不用再扒。
   仓库的 meta-edge 一半在“没亏出去的钱”上，点子库就是它的账本。
+- 改了一条已有点子（状态、结论、回测数字、备注），把它的 `date_updated` 写成当天。
+  页面的「最后更新」列和排序都读它。
 
 ## schema 速查
 
@@ -62,6 +65,7 @@
 | `source_url` | 来源链接，去重用；自研可为空 |
 | `aliases` | 同一点子的其他名字/实现，数组 |
 | `date_added` | 入库日期 |
+| `date_updated` | 可选。这一条最后一次改动的日期，YYYY-MM-DD，不早于 `date_added`；新增时不用填。页面的「最后更新」读它，没有就用 `date_added`。lyra 同步时也读它，格式不对会报错 |
 | `status` | backlog 待扒 / in_progress 扒取中 / published 已发布 / killed 已杀 |
 | `verdict` | win 跑赢 / fail 没跑赢 / inconclusive 难定论 / null 资料型无回测 |
 | `claim` | 一句话 claim，必须具体到可证伪 |
