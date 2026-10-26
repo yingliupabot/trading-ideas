@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "as_of": "2026-10-26",
+  "readme": "lyra（私有仓库）用自己的证据测过并杀掉的点子，和死因。由 lyra 的 `python -m research.common.idea_catalog export-killed` 整份生成，不要手改：下一次导出会覆盖手改。lyra 每在自己的证据上杀掉一个点子，就重新导出一次，以 PR 提交到这里。怎么用：采集和去重时，除了 catalog.json，也按标题、id 和 upstream_ids 搜一遍这个文件；搜到了默认跳过，只有新点子能绕开 cause 说的死因时才值得新增条目。字段：id 是 lyra 的条目 id；upstream_ids 是它在 catalog.json 里对应的条目，空数组表示只有 lyra 有；title 是 lyra 写的假设（机制、标的、周期）；cause 是死因代码，含义见 causes；why 是一句英文证据；trials 是 lyra 数过的变体数，status 为 exact 是精确数、at_least 是下限、unknown 是数不清（count 为 null）；as_of 是导出日期。只发布已杀的点子，还在实验室里的和通过的不会出现在这里。",
+  "causes": {
+    "leak_or_data_artefact": "数据泄漏或数据瑕疵：收益来自当时拿不到的信息、幸存者偏差或错误数据，修正后就没了",
+    "no_predictive_power": "没有预测力：统计上不显著，或跑不赢对照基准",
+    "wrong_sign": "方向反了：效应存在，但和点子声称的方向相反",
+    "unstable_across_halves": "前后不一致：样本前后两半（或样本内外）结论不同，撑不住",
+    "eaten_by_costs": "被成本吃掉：扣掉佣金、买卖价差或融资成本之后不再赚钱",
+    "duplicate": "重复：和已有的信号几乎是同一个东西",
+    "no_increment": "没有增量：在已有信号、已知因子或基准之上不多出任何东西",
+    "reconciliation_mismatch": "对不上账：生产代码算出来的和研究时算的不是同一个东西",
+    "failed_reference_criteria": "没过 lyra 的策略参考标准（跑赢 QQQ、回撤和超额夏普、样本外稳定、时点一致的股票池），由 owner 定",
+    "broke_down_live": "实盘失效：在模拟盘或实盘里撑不住"
+  },
+  "ideas": [
+    {
+      "id": "adaptive-supertrend-futures",
+      "title": "Adaptive SuperTrend trend following on continuous futures (adaptive_supertrend_futures_strategy_v1)",
+      "upstream_ids": [],
+      "cause": "failed_reference_criteria",
+      "why": "Deleted in the owner-approved 2026-07-07 disposition with all nine futures strategies, none of which had cleared the acceptance gates",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "adaptive-supertrend-timing-spxl",
+      "title": "Adaptive SuperTrend long/flat timing on SPXL (3x S&P 500), daily",
+      "upstream_ids": [],
+      "cause": "no_increment",
+      "why": "Leverage scales return and drawdown, not the edge: the same rule scores Sharpe 0.81 with 54.5% max drawdown on SPXL against 0.99 and 16.2% on SPY, 2016-2025",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "analyst-rating-stock-selection",
+      "title": "Top-10 US large caps by adjusted analyst rating score, daily (equity_analyst_score_strategy_v1; also the analyst-ranked multifactor_equity_largecap_v1 and screener_equity_v1)",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Retired, not regenerated: the last stored run made +407.63% at excess Sharpe 0.73 and alpha vs QQQ of -2.1%, and the analyst leg fails the marginal signal gate",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "ars-box-breakout-leveraged-etf",
+      "title": "ARS box breakout on leveraged and inverse ETFs, 1-hour bars, stop, target or time exit",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Across 28 leveraged ETFs on 1-hour bars over about 3 years the port averages -3.26% total return per ETF at 5 bps and is positive on 13; the campaign then dropped the trade backtest (15-minute n=180, t about 1.4)",
+      "trials": {
+        "status": "at_least",
+        "count": 21
+      }
+    },
+    {
+      "id": "ars-box-breakout-nvda",
+      "title": "ARS Trend Scanner swing-pivot box breakout on NVDA, daily, held up to 10 sessions",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "On NVDA 2018-2024 the ARS box breakout made +7.62% at Sharpe 0.15 against buy-and-hold's +2,624% at 1.18",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "breakout-pullback-futures",
+      "title": "Breakout-then-pullback trend following on continuous futures (breakout_pullback_futures_strategy_v1)",
+      "upstream_ids": [],
+      "cause": "failed_reference_criteria",
+      "why": "Deleted in the owner-approved 2026-07-07 disposition with all nine futures strategies, none of which had cleared the acceptance gates",
+      "trials": {
+        "status": "unknown",
+        "count": null
+      }
+    },
+    {
+      "id": "cmf-money-flow-cross-sectional",
+      "title": "Chaikin Money Flow (20-day) as a cross-sectional ranking factor on US large caps, daily",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Re-gated on the 101-name LIST_QQQ: in-sample Sharpe 0.21 and walk-forward -0.07, no cross-sectional edge",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "conditional-reversal-turnover-52w-high",
+      "title": "One-month reversal or momentum conditioned on turnover and price-to-52-week-high (Chen-Stivers-Sun 2024), point-in-time S&P 500, monthly",
+      "upstream_ids": [],
+      "cause": "failed_reference_criteria",
+      "why": "+285.13% against QQQ's +503.18% on the same 2016-2025 dates, beating QQQ in 4 of 27 rolling 3-year windows, excess Sharpe 0.6688, max DD 43.48%; the owner moved the family out of permanent results as not passing",
+      "trials": {
+        "status": "exact",
+        "count": 3
+      }
+    },
+    {
+      "id": "earnings-event-reversion-sp500",
+      "title": "Reversal of the earnings-day move on the point-in-time S&P 500, conditioned on reaction direction and beat or miss, 1 to 20 sessions",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "17,718 priced events 2016-2025: no reaction-by-surprise cell clears two date-clustered SEs through +10 sessions, and the one cell that clears at +20, up on a beat (+0.23%, SE 0.11%), continues rather than reverts",
+      "trials": {
+        "status": "at_least",
+        "count": 1
+      }
+    },
+    {
+      "id": "economic-release-blackout-filter",
+      "title": "Blackout on opening new positions the session before FOMC, CPI and employment releases, US large caps",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "CPI and employment release sessions barely widen the cross-section (x0.95, x1.02); the session after FOMC does (x1.32), but a blackout is worth about 1.8% of a 20-day hold's dispersion against 12-13% of entry sessions refused",
+      "trials": {
+        "status": "at_least",
+        "count": 3
+      }
+    },
+    {
+      "id": "gmm-volume-profile-mean-reversion-spy-daily",
+      "title": "Mean reversion to the GMM volume-profile node on SPY, daily swing",
+      "upstream_ids": [],
+      "cause": "unstable_across_halves",
+      "why": "In-sample Sharpe 0.84 but holdout 0.34, 40% retention against the 70% floor, and regime-concentrated: '2020 erases 2019+2022+2023'",
+      "trials": {
+        "status": "at_least",
+        "count": 2
+      }
+    },
+    {
+      "id": "gmm-volume-profile-mean-reversion-spy-intraday",
+      "title": "Mean reversion to the GMM volume-profile node on SPY intraday bars, 1 to 15 minutes (the gmm_vp strategies)",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "No gross edge at any refit cadence, at most 0.16 bps a trade against a 0.6 bps round trip, and all three intraday variants have negative Sharpe",
+      "trials": {
+        "status": "at_least",
+        "count": 5
+      }
+    },
+    {
+      "id": "kde-overnight-volume-profile-breakout-es",
+      "title": "Break of the overnight high filtered by the KDE volume-profile mode, ES futures, minute bars, timed exit (eurolongbreakhighV3 ported as written)",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Ported as written onto 15 months of ES minute bars, the rule takes 21 trades and its KDE mode filter is worth +0.65 bps a trade at t = 0.05",
+      "trials": {
+        "status": "at_least",
+        "count": 16
+      }
+    },
+    {
+      "id": "non-fundamental-news-reversion",
+      "title": "Reversal after large single-name moves on news that does not change fundamentals, point-in-time S&P 500, 3 to 20 sessions",
+      "upstream_ids": [],
+      "cause": "leak_or_data_artefact",
+      "why": "The unconfirmed-vs-confirmed split (+1.20% vs -0.63% at +10 sessions) was a label leak; with the label read on [D, D+2] and the return from D+3, down moves revert alike, 0.43% unconfirmed vs 0.62% confirmed over [D+3, D+10]",
+      "trials": {
+        "status": "at_least",
+        "count": 2
+      }
+    },
+    {
+      "id": "opening-15min-pattern-intraday",
+      "title": "Classify the first 15 one-minute bars into five opening patterns and trade the rest of the session, intraday",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "The study's own conclusion is that there is no stable excess return across instruments; no number is archived",
+      "trials": {
+        "status": "at_least",
+        "count": 10
+      }
+    },
+    {
+      "id": "overnight-return-momentum-cross-sectional",
+      "title": "21-day overnight-return momentum (Lou-Polk-Skouras 2019) as a cross-sectional factor, point-in-time S&P 500",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Excess Sharpe 0.2337 against 0.4377 for the same strategy sorted on total return, paired Newey-West t -1.36",
+      "trials": {
+        "status": "exact",
+        "count": 1
+      }
+    },
+    {
+      "id": "single-signal-cross-sectional-us-largecap",
+      "title": "Each of 33 oscillator, trend, momentum and fundamental signals alone as a cross-sectional ranking factor on US large caps",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "No leg passes the priced or frictionless signal gate; on the marginal gate 24 legs duplicate another and the other 9 have residual Newey-West t from -1.69 to +0.61 against 3.0",
+      "trials": {
+        "status": "at_least",
+        "count": 33
+      }
+    },
+    {
+      "id": "spy-causal-null-rule-timing",
+      "title": "SPY long/flat on a causal percentile of absolute return, realized volatility, VIX, drawdown or credit, the rule chosen by walk-forward, daily",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Walk-forward over 2016-2026 at 5 bps, the selected rule's out-of-sample excess Sharpe is 0.348 against 0.762 for SPY buy-and-hold",
+      "trials": {
+        "status": "exact",
+        "count": 32
+      }
+    },
+    {
+      "id": "spy-intraday-breakout-continuation",
+      "title": "Intraday breakout continuation on SPY minute bars, flat at the close: noise-area band breaks, opening-range breakouts and prior-high breaks",
+      "upstream_ids": [],
+      "cause": "no_predictive_power",
+      "why": "Atty Noise Area on SPY 1-minute bars 2021-09 to 2026-06 at 5 bps a side: excess Sharpe -1.6593 and -47.61% vs SPY's +60.99%, gross -0.0007% a trade",
+      "trials": {
+        "status": "at_least",
+        "count": 8
+      }
+    },
+    {
+      "id": "supertrend-3d",
+      "title": "SuperTrend ATR-band trend timing on SPY, daily: upstream flip-and-reverse sweep and parameter grid, and lyra's adaptive long/flat variants",
+      "upstream_ids": [
+        "supertrend-3d",
+        "sweep-supertrend-kivanc"
+      ],
+      "cause": "no_predictive_power",
+      "why": "286 of 286 grid cells lose to SPY over 2005-2026 after 5 bps (best Sharpe 0.218 vs 0.644); lyra's long/flat run of record ties SPY on excess Sharpe (0.7596 vs 0.7624) and trails it on return (+192% vs +353%), 2016-01 to 2026-08",
+      "trials": {
+        "status": "at_least",
+        "count": 292
+      }
+    },
+    {
+      "id": "supertrend-ema-volume-futures",
+      "title": "SuperTrend plus moving-average plus volume-confirmed trend following on continuous futures (supertrend_ema_volume_futures_strategy_v1)",
+      "upstream_ids": [],
+      "cause": "failed_reference_criteria",
+      "why": "Deleted in the owner-approved 2026-07-07 disposition with all nine futures strategies, none of which had cleared the acceptance gates",
+      "trials": {
+        "status": "unknown",
+        "count": null
+      }
+    }
+  ]
+}

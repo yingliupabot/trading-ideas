@@ -8,18 +8,24 @@
 ### 1. 采集 — 看到点子先别动手
 在 TradingView、论文、博客、Reddit、书里看到有意思的点子，
 第一步不是写代码，是打开点子库页面（或直接搜 `catalog.json`），
-按标题、来源 URL、alias 查一遍。
+按标题、来源 URL、alias 查一遍；再用同样的词搜一遍 `lyra-killed.json`
+（lyra 已经测过并杀掉的点子，怎么读见第 2 步）。
 
 ### 2. 去重 — 表里有的，跳过
 - 搜到了 → **直接跳过**，不重复扒。如果新来源有增量信息，
   把它加进该条目的 `aliases`，不新增条目。
+- 在 `lyra-killed.json` 里搜到了 → **默认也跳过**：lyra 已经用自己的数据测过并杀掉了它。
+  `cause` 是死因代码（含义见文件里的 `causes`），`why` 是一句证据，
+  `trials` 是 lyra 试过的版本数，`upstream_ids` 指向本表里的同一个点子（空表示只有 lyra 有）。
+  只有新点子能绕开这个死因时才新增条目，并在 `notes` 里写明绕开的是哪个死因、
+  对应 lyra 的哪个 `id`。这个文件由 lyra 生成，不要手改。
 - 没搜到 → 新增一条 `backlog`，字段按 schema 填：
   `claim` 必须写清楚——这个点子到底在 claim 什么，
   一句话，含糊的 claim 等于没法证伪，优先杀掉这种。
 
 去重键优先级：`id/slug` > `source_url` > `aliases`。
 同一个点子的 N 个实现（比如 Supertrend 的 50 个版本）算**一个点子**，
-不要每个版本开一条。
+不要每个版本开一条；跑过几个版本，记进该条目的 `trials`。
 
 ### 3. 评分 — backlog 里先扒哪个
 `priority`: high / medium / low，凭三条打分：
@@ -61,6 +67,7 @@
 | `claim` | 一句话 claim，必须具体到可证伪 |
 | `baseline` | 对照基准，如 SPY buy-hold |
 | `result` | 回测数字：sample / strategy / baseline / excess_pp（累计，win 门槛用）/ excess_ann_pp（年化，pp/年）/ sharpe / baseline_sharpe（页面展示列：策略/基准并列）/ trades / max_dd |
+| `trials` | 可选。这个点子跑出过结论的版本数：每一组不同的规则或参数算一个；同一组规则换时间窗口、换成本假设重跑不算新版本，对照基准也不算。整数 ≥ 0，没回测写 0。数不清就不填这个字段，不要写 null。lyra 读它来算多重检验的 N |
 | `priority` | high / medium / low（只对 backlog/in_progress 有意义） |
 | `tags` | 标签数组 |
 | `note_url` | 已发布笔记的相对链接，无则 null |
