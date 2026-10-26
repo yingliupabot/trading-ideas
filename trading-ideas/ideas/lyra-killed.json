@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "as_of": "2026-10-26",
-  "readme": "lyra（私有仓库）用自己的证据测过并杀掉的点子，和死因。由 lyra 的 `python -m research.common.idea_catalog export-killed` 整份生成，不要手改：下一次导出会覆盖手改。lyra 每在自己的证据上杀掉一个点子，就重新导出一次，以 PR 提交到这里。怎么用：采集和去重时，除了 catalog.json，也按标题、id 和 upstream_ids 搜一遍这个文件；搜到了默认跳过，只有新点子能绕开 cause 说的死因时才值得新增条目。字段：id 是 lyra 的条目 id；upstream_ids 是它在 catalog.json 里对应的条目，空数组表示只有 lyra 有；title 是 lyra 写的假设（机制、标的、周期）；cause 是死因代码，含义见 causes；why 是一句英文证据；trials 是 lyra 数过的变体数，status 为 exact 是精确数、at_least 是下限、unknown 是数不清（count 为 null）；as_of 是导出日期。只发布已杀的点子，还在实验室里的和通过的不会出现在这里。",
+  "readme": "lyra（私有仓库）用自己的证据测过并杀掉的点子，和死因。由 lyra 的 `python -m research.common.idea_catalog export-killed` 整份生成，不要手改：下一次导出会覆盖手改。lyra 每在自己的证据上杀掉一个点子，就重新导出一次，以 PR 提交到这里。怎么用：采集和去重时，除了 catalog.json，也按标题、id 和 upstream_ids 搜一遍这个文件；搜到了默认跳过，只有新点子能绕开 cause 说的死因时才值得新增条目。字段：id 是 lyra 的条目 id；upstream_ids 是它在 catalog.json 里对应的条目，空数组表示只有 lyra 有；title 是 lyra 写的假设（机制、标的、周期）；cause 是死因代码，含义见 causes；why 是一句英文证据；trials 是 lyra 数过的变体数，status 为 exact 是精确数、at_least 是下限、unknown 是数不清（count 为 null）；date_updated 是这条最后一次变动的日期：它第一次发布，或之后标题、upstream_ids、死因、证据、试验数有改动的那次导出；as_of 是导出日期。只发布已杀的点子，还在实验室里的和通过的不会出现在这里。",
   "causes": {
     "leak_or_data_artefact": "数据泄漏或数据瑕疵：收益来自当时拿不到的信息、幸存者偏差或错误数据，修正后就没了",
     "no_predictive_power": "没有预测力：统计上不显著，或跑不赢对照基准",
@@ -24,7 +24,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "adaptive-supertrend-timing-spxl",
@@ -35,7 +36,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "analyst-rating-stock-selection",
@@ -46,7 +48,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "ars-box-breakout-leveraged-etf",
@@ -57,7 +60,8 @@
       "trials": {
         "status": "at_least",
         "count": 21
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "ars-box-breakout-nvda",
@@ -68,7 +72,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "breakout-pullback-futures",
@@ -79,7 +84,8 @@
       "trials": {
         "status": "unknown",
         "count": null
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "cmf-money-flow-cross-sectional",
@@ -90,7 +96,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "conditional-reversal-turnover-52w-high",
@@ -101,7 +108,8 @@
       "trials": {
         "status": "exact",
         "count": 3
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "earnings-event-reversion-sp500",
@@ -112,7 +120,8 @@
       "trials": {
         "status": "at_least",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "economic-release-blackout-filter",
@@ -123,7 +132,8 @@
       "trials": {
         "status": "at_least",
         "count": 3
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "gmm-volume-profile-mean-reversion-spy-daily",
@@ -134,7 +144,8 @@
       "trials": {
         "status": "at_least",
         "count": 2
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "gmm-volume-profile-mean-reversion-spy-intraday",
@@ -145,7 +156,8 @@
       "trials": {
         "status": "at_least",
         "count": 5
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "kde-overnight-volume-profile-breakout-es",
@@ -156,7 +168,8 @@
       "trials": {
         "status": "at_least",
         "count": 16
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "non-fundamental-news-reversion",
@@ -167,7 +180,8 @@
       "trials": {
         "status": "at_least",
         "count": 2
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "opening-15min-pattern-intraday",
@@ -178,7 +192,8 @@
       "trials": {
         "status": "at_least",
         "count": 10
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "overnight-return-momentum-cross-sectional",
@@ -189,7 +204,8 @@
       "trials": {
         "status": "exact",
         "count": 1
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "single-signal-cross-sectional-us-largecap",
@@ -200,7 +216,8 @@
       "trials": {
         "status": "at_least",
         "count": 33
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "spy-causal-null-rule-timing",
@@ -211,7 +228,8 @@
       "trials": {
         "status": "exact",
         "count": 32
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "spy-intraday-breakout-continuation",
@@ -222,7 +240,8 @@
       "trials": {
         "status": "at_least",
         "count": 8
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "supertrend-3d",
@@ -236,7 +255,8 @@
       "trials": {
         "status": "at_least",
         "count": 292
-      }
+      },
+      "date_updated": "2026-10-26"
     },
     {
       "id": "supertrend-ema-volume-futures",
@@ -247,7 +267,8 @@
       "trials": {
         "status": "unknown",
         "count": null
-      }
+      },
+      "date_updated": "2026-10-26"
     }
   ]
 }

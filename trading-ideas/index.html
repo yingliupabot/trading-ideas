@@ -10,17 +10,22 @@
 <style>
 :root, :root[data-theme="dark"] { --neutral-bg: rgba(139, 148, 158, 0.28); }
 :root[data-theme="light"] { --neutral-bg: rgba(89, 99, 110, 0.20); }
+/* 这一页的表有 10 列：版心从全站的 1120px 放宽到 1840px，顶栏跟着对齐，窄屏照旧横滑 */
+.layout, .nav-inner { max-width: 1840px; }
 .table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; }
-table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 780px; } /* 笔记列钉在右侧：横滑时也看得见，不用一路拖到底 */ table.ideas th:last-child, table.ideas td:last-child { position: sticky; right: 0; } table.ideas tbody td:last-child { box-shadow: -12px 0 16px -12px rgba(0,0,0,.45); }
+table.ideas { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 1180px; } /* 笔记列钉在右侧：横滑时也看得见，不用一路拖到底 */ table.ideas th:last-child, table.ideas td:last-child { position: sticky; right: 0; } table.ideas tbody td:last-child { box-shadow: -12px 0 16px -12px rgba(0,0,0,.45); }
 table.ideas th, table.ideas td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
 table.ideas th { background: var(--panel); color: var(--muted); font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
 table.ideas tr:last-child td { border-bottom: none; }
+/* 来源和 Sharpe 两列给个宽度上限，多出来的宽度留给「点子」 */
+table.ideas th:nth-child(4) { width: 8em; }
+table.ideas th:nth-child(9) { width: 9em; }
 .idea-date { white-space: nowrap; color: var(--muted); font-size: 13px; }
 table.ideas tbody tr.row-win td { background: var(--win-bg); }
 table.ideas tbody tr.row-fail td { background: var(--fail-bg); }
 table.ideas tbody tr.row-neutral td { background: var(--neutral-bg); }
 table.ideas tbody tr:hover td { filter: brightness(0.97); }
-.idea-title { font-weight: 600; }
+.idea-title { font-weight: 600; overflow-wrap: anywhere; }
 .idea-claim { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .idea-claim details { margin-top: 4px; }
 .idea-claim summary { cursor: pointer; color: var(--accent); font-size: 13px; }
@@ -37,12 +42,22 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
 .num-fail { color: var(--red); font-weight: 600; white-space: nowrap; }
 .num-na { color: var(--muted); } 
          .num-base { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.num-text { white-space: normal; } /* 不是数字的 Sharpe（分窗口写的）照常换行，不把整列撑宽 */
   
 .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .filter-row select { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
 .stats-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 2; }
 .stats-box b { font-size: 18px; }
 .rule-box { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.9; }
+.pill.who-lyra { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.kill-cell { min-width: 200px; max-width: 300px; }
+.kill { font-size: 13px; line-height: 1.55; }
+.kill + .kill { margin-top: 8px; }
+.kill-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.kill details { margin-top: 2px; }
+.kill summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+.kill details p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.load-error { color: var(--red); font-size: 13px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -94,12 +109,13 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
     <a href="tradingview-pine-scripts/volume-delta-footprint/">Volume Delta Footprint Map 研读</a>
     <h4>源码</h4>
     <a href="https://github.com/yingliupabot/trading-ideas/tree/main/trading-ideas/ideas" target="_blank" rel="noopener">🗂 catalog.json 源码</a>
+    <a href="https://github.com/yingliupabot/trading-ideas/blob/main/trading-ideas/ideas/lyra-killed.json" target="_blank" rel="noopener">🪦 lyra-killed.json 源码</a>
   </aside>
 
   <main class="content">
     <div class="top">
       <h1>点子库</h1>
-      <p class="sub">TradingView、论文、博客、Reddit——所有点子的唯一入口。已发布的研读笔记也在表里，点「笔记 →」进入。一个个扒，扒过的留记录，没扒的排队。</p>
+      <p class="sub">TradingView、论文、博客、Reddit——所有点子的唯一入口。已发布的研读笔记也在表里，点「笔记 →」进入。一个个扒，扒过的留记录，没扒的排队。lyra 用自己的证据杀掉的点子也并在表里，「谁杀的 · 死因」一列写明是谁杀的、为什么。</p>
     </div>
 
     <div class="search-wrap">
@@ -120,6 +136,7 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
         <option value="paper">论文</option>
         <option value="blog">博客</option>
         <option value="self">自研</option>
+        <option value="lyra">lyra</option>
       </select>
       <select id="f-verdict">
         <option value="">全部结论</option>
@@ -136,20 +153,28 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
         <option value="industry">行业</option>
         <option value="blog">博客</option>
       </select>
+      <select id="f-killer">
+        <option value="">谁杀的：全部</option>
+        <option value="lyra">lyra 杀的</option>
+        <option value="trading-ideas">trading-ideas 杀的</option>
+      </select>
     </div>
     <p class="legend"><span class="dot dot-win"></span>跑赢 baseline&ensp;·&ensp;<span class="dot dot-fail"></span>没跑赢&ensp;·&ensp;<span class="dot dot-info"></span>待定 / 资料型</p>
 
     <div class="table-scroll">
       <table class="ideas">
         <thead>
-          <tr><th>点子</th><th>日期</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>Sharpe（策略/基准）</th><th>笔记</th></tr>
+          <tr><th>点子</th><th>加入</th><th>最后更新</th><th>来源</th><th>类型</th><th>状态</th><th>结论</th><th>谁杀的 · 死因</th><th>Sharpe（策略/基准）</th><th>笔记</th></tr>
         </thead>
         <tbody id="idea-body">
-          <tr><td colspan="8" style="color:var(--muted)">加载中…</td></tr>
+          <tr><td colspan="10" style="color:var(--muted)">加载中…</td></tr>
         </tbody>
       </table>
     </div>
-    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p> <p class="rule-box">口径统一：Sharpe = 平均收益 / 收益标准差 × √年化周期，rf=0，策略与基准同口径；绿色=策略 Sharpe ≥ 基准，粉色=低于基准。win 门槛仍是累计超额 ≥10pp 且 Sharpe 同时跑赢（历史规则）。</p>
+    <p id="lyra-error" class="load-error" hidden>lyra-killed.json 没加载出来：这次表里没有 lyra 杀的点子。</p>
+    <p id="no-result" class="no-result" hidden>没有匹配的点子，换个关键词试试。</p> <p class="rule-box">口径统一：Sharpe = 平均收益 / 收益标准差 × √年化周期，rf=0，策略与基准同口径；绿色=策略 Sharpe ≥ 基准，粉色=低于基准。win 门槛仍是累计超额 ≥10pp 且 Sharpe 同时跑赢（历史规则）。<br>
+      最后更新：这一行最后一次变动的日期。取 catalog.json 的 <code>date_updated</code>，没有就是加入日期；lyra 杀的点子取 lyra-killed.json 里它的 <code>date_updated</code>，两个都有取较晚的。表按它从新到旧排。<br>
+      谁杀的：<b>trading-ideas</b> 是这个仓库自己的回测和收录门杀的，死因是备注的第一句，全文在「备注 / 死因」里；<b>lyra</b> 是私有仓库 lyra 用自己的数据测过后杀的，粗体是死因，旁边是它测过的变体数，点「证据」看死因的解释和 lyra 的一句英文证据，都来自 lyra-killed.json。</p>
 
     <footer>trading-ideas · 内容仅作学习交流，不构成投资建议</footer>
   </main>
@@ -161,8 +186,72 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
   var KIND = { strategy: "策略", paper: "论文", data: "数据", industry: "行业", blog: "博客" };
   var VERDICT = { win: ["跑赢", "v-win"], fail: ["没跑赢", "v-fail"], inconclusive: ["难定论", "v-inc"] };
   var ideas = [];
+  var causes = {};
 
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+  // lyra-killed.json 的 causes 是「名字：解释」或「名字（解释）…」，格子里只放名字，全文在「证据」里
+  function causeName(code) {
+    var line = causes[code] || code;
+    var cut = line.search(/[：（]/);
+    return cut > 0 ? line.slice(0, cut) : line;
+  }
+
+  // trading-ideas 自己杀的：死因写在 notes 第一句（多以「死因：」开头），全文在「备注 / 死因」里
+  function shortReason(notes) {
+    var first = String(notes || "").split(/[。；;\n]/)[0].replace(/^死因\s*[:：]\s*/, "");
+    return first.length > 80 ? first.slice(0, 79) + "…" : first;
+  }
+
+  function trialsText(t) {
+    if (!t || t.count == null) return "变体数不详";
+    return "测了 " + (t.status === "at_least" ? "≥" : "") + t.count + " 个变体";
+  }
+
+  function killedHere(it) { return it.status === "killed" && !it.lyraOnly; }
+
+  // 最后更新：catalog.json 的 date_updated（没有就是 date_added）和 lyra 的 date_updated 取较晚的
+  function lastUpdate(it) {
+    var own = it.date_updated || it.date_added || "";
+    var lyra = it.lyra ? it.lyra.date_updated : "";
+    return own > lyra ? own : lyra;
+  }
+
+  function killerCell(it) {
+    var parts = [];
+    if (killedHere(it)) {
+      parts.push('<div class="kill"><span class="pill">trading-ideas</span> ' + esc(shortReason(it.notes)) + "</div>");
+    }
+    if (it.lyra) {
+      parts.push('<div class="kill"><span class="pill who-lyra">lyra</span> <b>' + esc(causeName(it.lyra.cause)) + "</b>" +
+        ' <span class="kill-meta">' + esc(trialsText(it.lyra.trials)) + "</span>" +
+        "<details><summary>证据</summary><p>" + esc(causes[it.lyra.cause] || it.lyra.cause) + "</p><p>" + esc(it.lyra.why) + "</p></details></div>");
+    }
+    return parts.length ? parts.join("") : '<span class="num-na">—</span>';
+  }
+
+  // lyra 杀的点子并进表：upstream_ids 指到的行挂上 lyra 的判定，只有 lyra 有的另起一行
+  function merge(catalog, killed) {
+    var rows = (catalog.ideas || []).slice();
+    var byId = {};
+    rows.forEach(function (it) { byId[it.id] = it; });
+    if (!killed) return rows;
+    causes = killed.causes || {};
+    (killed.ideas || []).forEach(function (k) {
+      var kill = { id: k.id, title: k.title, cause: k.cause, why: k.why, trials: k.trials, date_updated: k.date_updated || killed.as_of };
+      var held = (k.upstream_ids || []).filter(function (u) { return byId[u]; });
+      held.forEach(function (u) { byId[u].lyra = kill; });
+      if (!held.length) {
+        rows.push({
+          id: k.id, title: k.title, claim: "只在 lyra 里测过，catalog.json 里没有这一条。",
+          kind: "strategy", source: "lyra", source_name: "lyra", aliases: [], tags: [],
+          date_added: null, status: "killed", verdict: null, result: null, note_url: "", notes: null,
+          lyra: kill, lyraOnly: true
+        });
+      }
+    });
+    return rows;
+  }
 
   function render() {
     var q = (document.getElementById("search").value || "").toLowerCase();
@@ -170,15 +259,19 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
     var fo = document.getElementById("f-source").value;
     var fv = document.getElementById("f-verdict").value;
     var fk = document.getElementById("f-kind").value;
+    var fw = document.getElementById("f-killer").value;
     var body = document.getElementById("idea-body");
     var n = 0;
     var html = ideas.map(function (it) {
       if (fs && it.status !== fs) return "";
       if (fo && it.source !== fo) return "";
       if (fk && it.kind !== fk) return "";
-      if (fv === "none" && it.verdict !== null) return "";
+      if (fv === "none" && (it.verdict !== null || it.lyraOnly)) return "";
       if (fv && fv !== "none" && it.verdict !== fv) return "";
-      var hay = (it.title + " " + it.claim + " " + (it.tags || []).join(" ") + " " + (it.notes || "") + " " + (it.aliases || []).join(" ")).toLowerCase();
+      if (fw === "lyra" && !it.lyra) return "";
+      if (fw === "trading-ideas" && !killedHere(it)) return "";
+      var lyraText = it.lyra ? [it.lyra.id, it.lyra.title, it.lyra.why, causeName(it.lyra.cause)].join(" ") : "";
+      var hay = (it.title + " " + it.claim + " " + (it.tags || []).join(" ") + " " + (it.notes || "") + " " + (it.aliases || []).join(" ") + " " + lyraText).toLowerCase();
       if (q && hay.indexOf(q) < 0) return "";
       n++;
       var st = STATUS[it.status] || [it.status, ""];
@@ -187,53 +280,76 @@ table.ideas tbody tr:hover td { filter: brightness(0.97); }
       var title = noteUrl ? '<a class="idea-title" href="' + esc(noteUrl) + '">' + esc(it.title) + "</a>" : '<span class="idea-title">' + esc(it.title) + "</span>";
       var sharpe = '<span class="num-na">—</span>';
       if (it.result && it.result.sharpe != null) {
-        var sp = it.result.sharpe, bp = it.result.baseline_sharpe, fS = function (v) { return (typeof v === "number") ? v.toFixed(2) : esc(String(v)); };
+        var sp = it.result.sharpe, bp = it.result.baseline_sharpe, fS = function (v) { return (typeof v === "number") ? v.toFixed(2) : '<span class="num-text">' + esc(String(v)) + "</span>"; };
         var scls = (typeof sp === "number" && typeof bp === "number") ? (sp >= bp ? "num-win" : "num-fail") : "";
         sharpe = '<span class="' + scls + '">' + fS(sp) + "</span>" +
           (bp != null ? ' <span class="num-base">/ ' + fS(bp) + "</span>" : "");
       }
       var noteLink = noteUrl ? '<a href="' + esc(noteUrl) + '">笔记 →</a>' : '<span class="num-na">—</span>';
       var detail = it.notes ? "<details><summary>备注 / 死因</summary><p>" + esc(it.notes) + "</p></details>" : "";
-      var rowCls = it.verdict === "win" ? "row-win" : (it.verdict === "fail" ? "row-fail" : "row-neutral");
+      var rowCls = it.verdict === "win" ? "row-win" : (it.verdict === "fail" || it.lyraOnly ? "row-fail" : "row-neutral");
       return '<tr class="' + rowCls + '">' +
         "<td>" + title + '<div class="idea-claim">' + esc(it.claim) + detail + "</div></td>" +
         '<td class="idea-date">' + esc(it.date_added || "—") + "</td>" +
+        '<td class="idea-date">' + esc(lastUpdate(it) || "—") + "</td>" +
         "<td>" + esc(it.source_name) + "</td>" +
         "<td>" + esc(KIND[it.kind] || it.kind) + "</td>" +
         '<td><span class="pill ' + st[1] + '">' + st[0] + "</span></td>" +
         (v ? '<td><span class="pill ' + v[1] + '">' + v[0] + "</span></td>" : '<td><span class="num-na">—</span></td>') +
+        '<td class="kill-cell">' + killerCell(it) + "</td>" +
         "<td>" + sharpe + "</td>" +
         "<td>" + noteLink + "</td>" +
         "</tr>";
     }).join("");
-    body.innerHTML = html || '<tr><td colspan="8" style="color:var(--muted)">暂无</td></tr>';
+    body.innerHTML = html || '<tr><td colspan="10" style="color:var(--muted)">暂无</td></tr>';
     document.getElementById("no-result").hidden = n > 0;
   }
 
   function stats() {
-    var c = { total: ideas.length, backlog: 0, in_progress: 0, published: 0, killed: 0, win: 0 };
-    ideas.forEach(function (it) { if (c[it.status] != null) c[it.status]++; if (it.verdict === "win") c.win++; });
+    var c = { total: ideas.length, backlog: 0, in_progress: 0, published: 0, killed: 0, win: 0, lyraOnly: 0 };
+    var byLyra = {};
+    ideas.forEach(function (it) {
+      if (c[it.status] != null) c[it.status]++;
+      if (it.verdict === "win") c.win++;
+      if (it.lyraOnly) c.lyraOnly++;
+      if (it.lyra) byLyra[it.lyra.id] = true;
+    });
     document.getElementById("stats").innerHTML =
-      "共 <b>" + c.total + "</b> 个点子<br>" +
+      "共 <b>" + c.total + "</b> 个点子" + (c.lyraOnly ? "（" + c.lyraOnly + " 个只在 lyra）" : "") + "<br>" +
       "待扒 <b>" + c.backlog + "</b> · 扒取中 <b>" + c.in_progress + "</b><br>" +
       "已发布 <b>" + c.published + "</b> · 已杀 <b>" + c.killed + "</b><br>" +
-      "跑赢 baseline <b>" + c.win + "</b>";
+      "lyra 杀的 <b>" + Object.keys(byLyra).length + "</b> · 跑赢 baseline <b>" + c.win + "</b>";
   }
 
-  ["search", "f-status", "f-source", "f-verdict", "f-kind"].forEach(function (id) {
+  ["search", "f-status", "f-source", "f-verdict", "f-kind", "f-killer"].forEach(function (id) {
     document.getElementById(id).addEventListener("input", render);
     document.getElementById(id).addEventListener("change", render);
   });
 
-  fetch("ideas/catalog.json").then(function (r) { return r.json(); }).then(function (d) {
-    ideas = (d.ideas || []).slice().sort(function (a, b) {
+  function load(path) {
+    return fetch(path).then(function (r) {
+      if (!r.ok) throw new Error(path + " " + r.status);
+      return r.json();
+    });
+  }
+
+  // lyra-killed.json 加载失败时 catalog.json 照样渲染，但要在表下面说出来，不能悄悄少掉 lyra 的行
+  var killedLoad = load("ideas/lyra-killed.json").catch(function () {
+    document.getElementById("lyra-error").hidden = false;
+    return null;
+  });
+  Promise.all([load("ideas/catalog.json"), killedLoad]).then(function (got) {
+    ideas = merge(got[0], got[1]).sort(function (a, b) {
+      var ua = lastUpdate(a), ub = lastUpdate(b);
+      if (ua !== ub) return ua < ub ? 1 : -1;
       var da = a.date_added || "", db = b.date_added || "";
-      return db < da ? -1 : db > da ? 1 : 0;
+      if (da !== db) return da < db ? 1 : -1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
     stats();
     render();
   }).catch(function () {
-    document.getElementById("idea-body").innerHTML = '<tr><td colspan="8" style="color:var(--muted)">catalog.json 加载失败</td></tr>';
+    document.getElementById("idea-body").innerHTML = '<tr><td colspan="10" style="color:var(--muted)">catalog.json 加载失败</td></tr>';
   });
 })();
 </script>
