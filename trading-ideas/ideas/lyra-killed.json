@@ -39,7 +39,7 @@
     },
     {
       "id": "analyst-rating-stock-selection",
-      "title": "Top-10 US large caps by adjusted analyst rating score, daily (equity_analyst_score_strategy_v1; also the analyst-ranked multifactor_equity_largecap_v1 and screener_equity_v1)",
+      "title": "Top-10 US large caps by adjusted analyst rating score, daily, alone and as the ranking leg of two multifactor large-cap screens",
       "upstream_ids": [],
       "cause": "no_predictive_power",
       "why": "Retired, not regenerated: the last stored run made +407.63% at excess Sharpe 0.73 and alpha vs QQQ of -2.1%, and the analyst leg fails the marginal signal gate",
